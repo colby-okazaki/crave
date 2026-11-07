@@ -2,6 +2,7 @@ import type { Server as HttpServer } from "node:http";
 import { Server } from "socket.io";
 import { corsOrigin } from "./cors.js";
 import { findGroupForMember } from "./groups.js";
+import { matchPayload } from "./swipes.js";
 
 let io: Server | undefined;
 
@@ -29,7 +30,7 @@ export function attachLive(server: HttpServer) {
     socket.join(groupId);
     // Also runs on every reconnect, so a phone that dropped catches up
     const group = findGroupForMember(groupId, socket.handshake.auth.memberId);
-    socket.emit("state", { members: group?.members ?? [], match: null });
+    socket.emit("state", { members: group?.members ?? [], match: group?.match ? { restaurant: matchPayload(group.match) } : null });
   });
 }
 

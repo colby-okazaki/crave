@@ -20,6 +20,10 @@ export interface Group {
   members: Member[];
   // Searched once per group so everyone swipes the same cards in the same order
   restaurants?: Promise<Restaurant[]>;
+  // restaurantId -> (memberId -> liked). A member's first swipe on a place counts.
+  swipes: Map<string, Map<string, boolean>>;
+  // Set once, when everyone has liked the same place
+  match?: Restaurant;
   createdAt: number;
 }
 
@@ -95,6 +99,7 @@ export function createGroup(input: {
     location: input.location,
     filters: input.filters,
     members: [host],
+    swipes: new Map(),
     createdAt: Date.now(),
   };
   groupsByCode.set(group.joinCode, group);
