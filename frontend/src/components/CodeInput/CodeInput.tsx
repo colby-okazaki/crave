@@ -16,7 +16,8 @@ type CodeInputProps = {
 
 /**
  * One real <input> laid over the boxes. This keeps the phone keyboard, paste
- * and backspace working normally, while the boxes just display each letter.
+ * and backspace working normally, while the boxes just display each digit.
+ * Only digits are accepted.
  */
 export const CodeInput = forwardRef<HTMLInputElement, CodeInputProps>(function CodeInput(
   { value, length, onChange, onEnter, invalid = false, shakeKey = 0, autoFocus, ...aria },
@@ -56,7 +57,7 @@ export const CodeInput = forwardRef<HTMLInputElement, CodeInputProps>(function C
         ref={ref}
         className={styles.input}
         value={value}
-        onChange={(e) => onChange(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, length))}
+        onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, length))}
         onKeyDown={handleKeyDown}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
@@ -69,9 +70,10 @@ export const CodeInput = forwardRef<HTMLInputElement, CodeInputProps>(function C
         autoFocus={autoFocus}
         autoComplete="off"
         autoCorrect="off"
-        autoCapitalize="characters"
         spellCheck={false}
-        inputMode="text"
+        // Number keypad on phones (pattern is what triggers it on older iOS).
+        inputMode="numeric"
+        pattern="[0-9]*"
         enterKeyHint="next"
         aria-label="Group code"
         aria-invalid={invalid}

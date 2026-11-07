@@ -7,7 +7,7 @@ import { TextField } from "../../components/TextField/TextField";
 import type { JoinResult } from "../../api/groups";
 import styles from "./JoinGroup.module.css";
 
-/** Figma says 4 letters; the backend currently makes 6-character codes. Change here once agreed. */
+/** Join codes are 4 digits, kept as text so a leading zero survives (e.g. "0427"). Matches the backend. */
 export const CODE_LENGTH = 4;
 const NICKNAME_MAX = 30; // backend limit
 
@@ -19,13 +19,17 @@ const ERROR_MESSAGES: Record<Extract<JoinResult, { ok: false }>["error"], string
 
 type JoinGroupProps = {
   initialName?: string;
+  /** From an invite link (/join?code=1234). */
+  initialCode?: string;
   onBack: () => void;
   onJoin: (code: string, nickname: string) => Promise<JoinResult>;
-  onJoined: (result: Extract<JoinResult, { ok: true }>, nickname: string) => void;
+  onJoined: (result: Extract<JoinResult, { ok: true }>, nickname: string, code: string) => void;
 };
 
-export function JoinGroup({ initialName = "", onBack, onJoin, onJoined }: JoinGroupProps) {
-  const [code, setCode] = useState("");
+export function JoinGroup({ initialName = "", initialCode = "", onBack, onJoin, onJoined }: JoinGroupProps) {
+  const [code, setCode] = useState(() => initialCode.replace(/\D/g, "").slice(0, CODE_LENGTH));
+  // Came from an invite link with the code filled in: start on the name instead.
+  const [startOnName] = useState(() => code.length === CODE_LENGTH);
   const [name, setName] = useState(initialName);
   const [error, setError] = useState<JoinResult | null>(null);
   const [shakeCount, setShakeCount] = useState(0);
@@ -38,7 +42,7 @@ export function JoinGroup({ initialName = "", onBack, onJoin, onJoined }: JoinGr
   const codeError = error && !error.ok && error.error !== "NICKNAME_TAKEN";
 
   let hint = "";
-  if (!codeComplete) hint = `Fill in all ${CODE_LENGTH} letters to join`;
+  if (!codeComplete) hint = `Fill in all ${CODE_LENGTH} digits to join`;
   else if (!trimmedName) hint = "Add your name to join";
 
   async function handleSubmit(event: FormEvent) {
@@ -49,7 +53,7 @@ export function JoinGroup({ initialName = "", onBack, onJoin, onJoined }: JoinGr
     try {
       const result = await onJoin(code, trimmedName);
       if (result.ok) {
-        onJoined(result, trimmedName);
+        onJoined(result, trimmedName, code);
       } else {
         setError(result);
         if (result.error !== "NICKNAME_TAKEN") setShakeCount((n) => n + 1);
@@ -65,7 +69,7 @@ export function JoinGroup({ initialName = "", onBack, onJoin, onJoined }: JoinGr
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
         <BackButton onClick={onBack} />
         <h1 className={styles.title}>Join a group</h1>
-        <p className={styles.subtitle}>Enter the {CODE_LENGTH}-letter code your friend shared.</p>
+        <p className={styles.subtitle}>Enter the {CODE_LENGTH}-digit code your friend shared.</p>
 
         <CodeInput
           value={code}
@@ -77,7 +81,7 @@ export function JoinGroup({ initialName = "", onBack, onJoin, onJoined }: JoinGr
           onEnter={() => nameRef.current?.focus()}
           invalid={Boolean(codeError)}
           shakeKey={shakeCount}
-          autoFocus
+          autoFocus={!startOnName}
           aria-describedby="join-status"
         />
         {error && !error.ok && (
@@ -99,6 +103,7 @@ export function JoinGroup({ initialName = "", onBack, onJoin, onJoined }: JoinGr
           autoComplete="given-name"
           autoCapitalize="words"
           enterKeyHint="go"
+          autoFocus={startOnName}
         />
 
         <Spacer />

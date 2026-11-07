@@ -1,0 +1,54 @@
+/* Not designed in Figma yet: built from the existing tokens (card radius, buttons). */
+.dialog {
+  width: min(100% - 2 * var(--space-screen-x), 342px);
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.dialog[open] {
+  animation: dialog-in 200ms var(--ease-out);
+}
+
+.dialog::backdrop {
+  background: var(--color-scrim);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-label);
+  padding: var(--space-screen-x);
+}
+
+.title {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-bold);
+}
+
+.body {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-chip-gap);
+  margin-top: var(--space-label);
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog[open] {
+    animation: none;
+  }
+}

@@ -1,0 +1,114 @@
+/* Same size and shape as a Chip, dashed like the "+" slot under Who's here. */
+.plus {
+  position: relative;
+  flex-shrink: 0;
+  padding: var(--space-chip-y) var(--space-chip-x);
+  border: var(--border-width) dashed var(--color-text-muted);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  line-height: normal;
+  transition: transform var(--duration-press) var(--ease-out);
+}
+
+.plus::after {
+  content: "";
+  position: absolute;
+  /* 44×44 tap area: top/bottom % use the height, left/right % use the width. */
+  inset: calc((100% - var(--tap-target-min)) / 2);
+}
+
+.plus:active {
+  transform: scale(0.96);
+}
+
+/* Open: takes its own row so the search box and list have room on small phones. */
+.combo {
+  position: relative;
+  flex-basis: 100%;
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-chip-y) var(--space-chip-x);
+  border: var(--border-width) solid var(--color-primary);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  /* 16px+ stops iOS zooming in on focus. */
+  font-size: var(--font-size-subtitle);
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.list {
+  position: absolute;
+  top: calc(100% + var(--space-filter-label));
+  left: 0;
+  right: 0;
+  z-index: 1;
+  max-height: var(--dropdown-max-height);
+  margin: 0;
+  padding: var(--space-filter-label) 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: var(--border-width-hairline) solid var(--color-border);
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+  list-style: none;
+  transform-origin: top;
+  animation: drop-in 150ms var(--ease-out);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap-target-min);
+  padding: 0 var(--space-gap);
+  font-size: var(--font-size-subtitle);
+  cursor: pointer;
+}
+
+.option[data-active="true"] {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.empty {
+  padding: 12px var(--space-gap);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+}
+
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scaleY(0.96);
+  }
+}
+
+@media (hover: hover) {
+  .plus:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plus {
+    transition: none;
+  }
+  .plus:active {
+    transform: none;
+  }
+  .list {
+    animation: none;
+  }
+}
