@@ -62,8 +62,8 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 - [x] Close old groups after a while (e.g. 24 hours)
 
 **Restaurant data**
-- [ ] `GET /groups/:id/restaurants`: fetch nearby places using the group's filters
-- [ ] Every member gets the same stack in the same order (fetch once per group and store it)
+- [ ] `GET /groups/:id/restaurants`: fetch nearby places using the group's filters (endpoint works with fake data; real provider still to do)
+- [x] Every member gets the same stack in the same order (fetch once per group and store it)
 - [ ] Map the provider's response to our card fields so the front end never sees provider-specific data
 
 **Swipes and matching**

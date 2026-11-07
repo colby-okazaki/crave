@@ -1,8 +1,9 @@
 import cors from "cors";
 import express, { type ErrorRequestHandler } from "express";
 import { corsOrigin } from "./cors.js";
-import { ApiError, createGroup, joinGroup } from "./groups.js";
+import { ApiError, createGroup, findGroupForMember, joinGroup } from "./groups.js";
 import { emitToGroup } from "./live.js";
+import { mockProvider } from "./restaurants.js";
 
 function invalid(message: string): never {
   throw new ApiError(400, "INVALID_INPUT", message);
@@ -45,6 +46,16 @@ export function buildApp() {
     const member = result.members.find((m) => m.id === result.memberId);
     emitToGroup(result.groupId, "member_joined", { member });
     res.json(result);
+  });
+
+  app.get("/groups/:id/restaurants", async (req, res) => {
+    const group = findGroupForMember(req.params.id, req.header("X-Member-Id") ?? "");
+    if (!group) {
+      throw new ApiError(404, "GROUP_NOT_FOUND", "That code doesn't match an open group.");
+    }
+    // Cache the request itself, so two phones asking at once share one search
+    group.restaurants ??= mockProvider.search(group.location, group.filters);
+    res.json({ restaurants: await group.restaurants });
   });
 
   app.use((_req, _res, next) => {

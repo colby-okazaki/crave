@@ -22,7 +22,7 @@ Copy `.env.example` to `.env` and fill it in. `.env` is git-ignored; never commi
 
 ## Stack
 
-TypeScript, Node.js, Express, Socket.io. Groups live in memory for now (they reset when the server restarts); a database comes later. Restaurant data, swipes and match logic are not built yet.
+TypeScript, Node.js, Express, Socket.io. Groups live in memory for now (they reset when the server restarts); a database comes later. Swipes, match logic and real restaurant data are not built yet.
 
 ## Run it locally
 
@@ -42,7 +42,7 @@ The front end is a web app on a different address (for example `http://localhost
 | --- | --- |
 | `POST /groups` | Done |
 | `POST /groups/:code/join` | Done |
-| `GET /groups/:id/restaurants` | Not yet |
+| `GET /groups/:id/restaurants` | Works, but returns the fake data in `docs/mock/` until we connect Google Places or Yelp |
 | `POST /groups/:id/swipes` | Not yet |
 | Socket.io: `state` and `member_joined` events | Done |
 | Socket.io: `match_found` event | Not yet |

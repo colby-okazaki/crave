@@ -1,4 +1,5 @@
 import { randomBytes, randomInt } from "node:crypto";
+import type { Restaurant } from "./restaurants.js";
 
 export interface Member {
   id: string;
@@ -17,6 +18,8 @@ export interface Group {
   location: { lat: number; lng: number };
   filters: Filters;
   members: Member[];
+  // Searched once per group so everyone swipes the same cards in the same order
+  restaurants?: Promise<Restaurant[]>;
   createdAt: number;
 }
 
