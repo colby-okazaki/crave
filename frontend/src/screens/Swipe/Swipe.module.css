@@ -1,0 +1,271 @@
+.screen {
+  gap: var(--space-gap-compact);
+  /* Cards fly off the side; don't let that make the page scroll sideways. */
+  overflow-x: clip;
+}
+
+/* Top bar: "Leave" and "4 of 20" */
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-label);
+}
+
+.leave {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-meta);
+  font-weight: var(--font-weight-medium);
+}
+
+.leave::after {
+  content: "";
+  position: absolute;
+  inset: calc((100% - var(--tap-target-min)) / 2) -8px;
+}
+
+.counter {
+  font-size: var(--font-size-meta);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress {
+  height: var(--progress-height);
+  overflow: hidden;
+  border-radius: calc(var(--progress-height) / 2);
+  background: var(--color-progress-track);
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primary);
+  transition: width 300ms var(--ease-out);
+}
+
+/* Card stack */
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 340px;
+  /* We handle every touch on the cards ourselves (no scrolling or zooming). */
+  touch-action: none;
+}
+
+.top,
+.next {
+  position: absolute;
+  inset: 0;
+}
+
+.top {
+  z-index: 1;
+  cursor: grab;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+
+.top:active {
+  cursor: grabbing;
+}
+
+/* Waiting underneath, a little smaller; grows as you drag the top card away. */
+.next {
+  transform: translateY(12px) scale(0.95);
+  transform-origin: 50% 0;
+}
+
+.stamp {
+  position: absolute;
+  top: 28px;
+  padding: 6px var(--space-chip-x);
+  border: var(--border-width-stamp) solid;
+  border-radius: var(--radius-stamp);
+  background: var(--color-surface);
+  font-size: var(--font-size-stamp);
+  font-weight: var(--font-weight-bold);
+  line-height: normal;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.likeStamp {
+  left: 24px;
+  border-color: var(--color-like);
+  color: var(--color-like);
+  transform: rotate(-14deg);
+}
+
+.nopeStamp {
+  right: 24px;
+  border-color: var(--color-pass);
+  color: var(--color-pass);
+  transform: rotate(14deg);
+}
+
+/* Loading / empty / error / done */
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: var(--border-width-hairline) solid var(--color-border);
+  border-radius: var(--radius-swipe-card);
+  background: var(--color-surface);
+}
+
+.placeholderPhoto {
+  flex: 1 1 0;
+  background: linear-gradient(125.6deg, var(--color-photo-from) 0%, var(--color-photo-to) 71.4%);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.placeholder .message {
+  padding: var(--space-card-info);
+}
+
+.notice {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-label);
+  padding: var(--space-screen-x);
+  border: var(--border-width-hairline) solid var(--color-border);
+  border-radius: var(--radius-swipe-card);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.notice button {
+  margin-top: var(--space-label);
+}
+
+.noticeTitle {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-bold);
+}
+
+.message {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-meta);
+}
+
+/* Pass / Details / Like */
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-actions);
+}
+
+.action {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--action-size);
+  height: var(--action-size);
+  padding: 0;
+  border: var(--border-width-action) solid transparent;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-action);
+  transition:
+    transform var(--duration-press) var(--ease-out),
+    opacity var(--duration-press) var(--ease-out),
+    background-color var(--duration-press) var(--ease-out);
+}
+
+.action img {
+  display: block;
+}
+
+.action:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.action:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pass {
+  border-color: var(--color-pass);
+}
+
+.like {
+  border-color: var(--color-like);
+}
+
+.details {
+  width: var(--action-size-small);
+  height: var(--action-size-small);
+}
+
+/* While dragging past the line (Figma "5. Swipe – dragging right"). */
+.faded {
+  opacity: 0.35;
+}
+
+.grown {
+  transform: scale(1.125);
+}
+
+.likeActive {
+  background: var(--color-like);
+  transform: scale(1.125); /* 64px → 72px, without moving the other buttons */
+}
+
+.hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+}
+
+.hintLike {
+  color: var(--color-like);
+  font-weight: var(--font-weight-semibold);
+}
+
+.hintPass {
+  color: var(--color-pass);
+  font-weight: var(--font-weight-semibold);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@media (hover: hover) {
+  .action:hover:not(:disabled) {
+    transform: scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressFill,
+  .action {
+    transition: none;
+  }
+  .placeholderPhoto {
+    animation: none;
+  }
+  .action:active:not(:disabled),
+  .grown,
+  .likeActive {
+    transform: none;
+  }
+}

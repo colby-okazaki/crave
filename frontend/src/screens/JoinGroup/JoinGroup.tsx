@@ -19,13 +19,17 @@ const ERROR_MESSAGES: Record<Extract<JoinResult, { ok: false }>["error"], string
 
 type JoinGroupProps = {
   initialName?: string;
+  /** From an invite link (/join?code=1234). */
+  initialCode?: string;
   onBack: () => void;
   onJoin: (code: string, nickname: string) => Promise<JoinResult>;
-  onJoined: (result: Extract<JoinResult, { ok: true }>, nickname: string) => void;
+  onJoined: (result: Extract<JoinResult, { ok: true }>, nickname: string, code: string) => void;
 };
 
-export function JoinGroup({ initialName = "", onBack, onJoin, onJoined }: JoinGroupProps) {
-  const [code, setCode] = useState("");
+export function JoinGroup({ initialName = "", initialCode = "", onBack, onJoin, onJoined }: JoinGroupProps) {
+  const [code, setCode] = useState(() => initialCode.replace(/\D/g, "").slice(0, CODE_LENGTH));
+  // Came from an invite link with the code filled in: start on the name instead.
+  const [startOnName] = useState(() => code.length === CODE_LENGTH);
   const [name, setName] = useState(initialName);
   const [error, setError] = useState<JoinResult | null>(null);
   const [shakeCount, setShakeCount] = useState(0);
@@ -49,7 +53,7 @@ export function JoinGroup({ initialName = "", onBack, onJoin, onJoined }: JoinGr
     try {
       const result = await onJoin(code, trimmedName);
       if (result.ok) {
-        onJoined(result, trimmedName);
+        onJoined(result, trimmedName, code);
       } else {
         setError(result);
         if (result.error !== "NICKNAME_TAKEN") setShakeCount((n) => n + 1);
@@ -77,7 +81,7 @@ export function JoinGroup({ initialName = "", onBack, onJoin, onJoined }: JoinGr
           onEnter={() => nameRef.current?.focus()}
           invalid={Boolean(codeError)}
           shakeKey={shakeCount}
-          autoFocus
+          autoFocus={!startOnName}
           aria-describedby="join-status"
         />
         {error && !error.ok && (
@@ -99,6 +103,7 @@ export function JoinGroup({ initialName = "", onBack, onJoin, onJoined }: JoinGr
           autoComplete="given-name"
           autoCapitalize="words"
           enterKeyHint="go"
+          autoFocus={startOnName}
         />
 
         <Spacer />

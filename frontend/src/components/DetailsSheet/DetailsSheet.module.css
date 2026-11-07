@@ -1,0 +1,229 @@
+/* Full-screen, see-through <dialog>; the scrim and sheet inside do the drawing. */
+.dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.dialog::backdrop {
+  background: transparent;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--color-scrim);
+  animation: fade-in var(--duration-sheet) var(--ease-sheet);
+}
+
+.sheet {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sheet-gap);
+  width: 100%;
+  max-width: var(--screen-max-width);
+  height: calc(100% - var(--space-sheet-top));
+  padding: var(--space-sheet-gap) var(--space-screen-x) max(var(--space-screen-bottom), env(safe-area-inset-bottom));
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--color-surface);
+  outline: none;
+  translate: -50% 0;
+  animation: slide-up var(--duration-sheet) var(--ease-sheet);
+}
+
+/* Everything fits: drag the sheet from anywhere. */
+.dragAnywhere,
+.dragZone {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dragZone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sheet-gap);
+}
+
+/* Looks like the small bar in Figma; tap area is the full 44px. */
+.handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: var(--tap-target-min);
+  height: var(--sheet-handle-height);
+  padding: 0;
+  border: 0;
+  background: none;
+  position: relative;
+}
+
+.handle::after {
+  content: "";
+  position: absolute;
+  inset: calc((100% - var(--tap-target-min)) / 2) 0;
+}
+
+.handleBar {
+  width: var(--sheet-handle-width);
+  height: var(--sheet-handle-height);
+  border-radius: calc(var(--sheet-handle-height) / 2);
+  background: var(--color-border);
+}
+
+.photos {
+  display: flex;
+  gap: var(--space-chip-gap);
+}
+
+.photo {
+  flex: 1 1 0;
+  height: var(--sheet-photo-height);
+  overflow: hidden;
+  border-radius: var(--radius-photo);
+  background: linear-gradient(142deg, var(--color-photo-from) 0%, var(--color-photo-to) 71.4%);
+}
+
+.photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+/* Scrolls on its own if a small phone can't fit everything. */
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sheet-gap);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Scroll instead of squashing things (the 1px divider would vanish). */
+.body > * {
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: var(--font-size-sheet-title);
+  font-weight: var(--font-weight-bold);
+  line-height: normal;
+}
+
+.meta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-meta);
+}
+
+.divider {
+  width: 100%;
+  height: var(--border-width-hairline);
+  margin: 0;
+  border: 0;
+  background: var(--color-border);
+}
+
+.infoRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-info-icon);
+  color: var(--color-text);
+  font-size: var(--font-size-meta);
+  text-decoration: none;
+}
+
+.infoRow img {
+  display: block;
+  flex-shrink: 0;
+}
+
+a.infoRow {
+  min-height: var(--tap-target-min);
+  margin: calc((var(--tap-target-min) - 20px) / -2) 0;
+}
+
+.sectionLabel {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+}
+
+.dishes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-chip-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menuLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-filter-label);
+  color: var(--color-primary);
+  font-size: var(--font-size-meta);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.menuLink img {
+  display: block;
+}
+
+.menuLink::after {
+  content: "";
+  position: absolute;
+  inset: calc((100% - var(--tap-target-min)) / 2) -8px;
+}
+
+.footer {
+  display: flex;
+  gap: var(--space-sheet-gap);
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (hover: hover) {
+  a.infoRow:hover span,
+  .menuLink:hover {
+    text-decoration: underline;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: fade-in var(--duration-sheet) linear;
+  }
+}

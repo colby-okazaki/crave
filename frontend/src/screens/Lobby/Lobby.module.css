@@ -1,0 +1,183 @@
+/* Figma's Lobby frame uses a 14px gap instead of the usual 16px. */
+.screen {
+  gap: var(--space-gap-compact);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-label);
+}
+
+.leave {
+  align-self: center;
+}
+
+.hostTag {
+  color: var(--color-primary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Code card */
+.codeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-label);
+  padding: var(--space-card-y) var(--space-screen-x);
+  border: var(--border-width-hairline) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.overline {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-overline);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-overline);
+  text-transform: uppercase;
+}
+
+.code {
+  /* Letter spacing also adds space after the last digit; pull it back so the code stays centered. */
+  margin-right: calc(-1 * var(--letter-spacing-code));
+  color: var(--color-primary);
+  font-size: var(--font-size-code-display);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--letter-spacing-code);
+  line-height: normal;
+}
+
+.share {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-chip-y) var(--space-chip-x);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  transition: transform var(--duration-press) var(--ease-out);
+}
+
+.share img {
+  display: block;
+}
+
+.share::after {
+  content: "";
+  position: absolute;
+  inset: calc((100% - var(--tap-target-min)) / 2) 0;
+}
+
+.share:active {
+  transform: scale(0.96);
+}
+
+/* Section headings */
+.sectionTitle {
+  font-size: var(--font-size-subtitle);
+  font-weight: var(--font-weight-bold);
+}
+
+/* Who's here */
+.members {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-avatar-gap);
+  min-height: var(--avatar-size);
+}
+
+.memberList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-avatar-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inviteSlot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  padding: 0;
+  border: var(--border-width) dashed var(--color-text-muted);
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-plus);
+  font-weight: var(--font-weight-medium);
+  transition: transform var(--duration-press) var(--ease-out);
+}
+
+.inviteSlot:active {
+  transform: scale(0.94);
+}
+
+.membersHint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Filters */
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-filter-label);
+}
+
+.filterLabel {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-chip-gap);
+}
+
+.tight {
+  gap: var(--space-chip-gap-tight);
+}
+
+/* Guests see this where the host's Start button is. */
+.waiting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--button-height);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-subtitle);
+  font-weight: var(--font-weight-medium);
+}
+
+@media (hover: hover) {
+  .inviteSlot:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .share,
+  .inviteSlot {
+    transition: none;
+  }
+  .share:active,
+  .inviteSlot:active {
+    transform: none;
+  }
+}

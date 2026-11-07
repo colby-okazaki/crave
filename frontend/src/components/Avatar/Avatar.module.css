@@ -1,0 +1,35 @@
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-bold);
+}
+
+.popIn {
+  animation: pop-in var(--duration-pop) var(--ease-out);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popIn {
+    animation: fade-in var(--duration-pop) linear;
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+}
