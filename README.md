@@ -14,6 +14,37 @@ A group of friends can't agree on where to eat. Everyone swipes yes or no on nea
 
 The full task split is in [`TASKS.md`](TASKS.md). Measured numbers for the resume are in [`STATS.md`](STATS.md).
 
+## Status
+
+Updated as each pull request merges. Last updated: 2026-11-07.
+
+| Area | State |
+| --- | --- |
+| Back end: create and join a group (4-digit codes), live member updates, old groups cleaned up | Done |
+| Back end: restaurants endpoint | Open pull request, fake data for now |
+| Back end: swipes, match logic, `match_found` event | Not built yet |
+| Back end: real restaurant data, hosting, database | Not built yet |
+| Front end: Home and Join a group screens | Done, still on mock data |
+| Front end: swiping, match screen, connection to the real server | Not built yet |
+
+Load-test numbers and repo stats are in [`STATS.md`](STATS.md).
+
+## Run it locally
+
+Back end (`http://localhost:3000`):
+
+```bash
+cd backend && npm install && npm run dev
+```
+
+Front end (Vite prints the address, usually `http://localhost:5173`):
+
+```bash
+cd frontend && npm install && npm run dev
+```
+
+More detail is in [`backend/README.md`](backend/README.md) and [`frontend/README.md`](frontend/README.md).
+
 ## Project layout
 
 ```
@@ -42,7 +73,7 @@ The logo is a placeholder. Davin's style guide can build on it or replace it.
 ## How it works
 
 1. One person starts a group and picks a location and filters (distance, price, type of food).
-2. They share a short code or link with friends.
+2. They share a 4-digit code with friends.
 3. Everyone joins and sees the same stack of restaurant cards.
 4. Each person swipes right (yes) or left (no) on their own phone.
 5. As soon as everyone says yes to the same place, all phones show a match screen.
