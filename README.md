@@ -22,7 +22,7 @@ Updated as each pull request merges. Last updated: 2026-11-07.
 | --- | --- |
 | Back end: create and join a group (4-digit codes), live member updates, old groups cleaned up | Done |
 | Back end: restaurants endpoint | Done, fake data for now |
-| Back end: swipes, match logic (everyone must say yes), `match_found` event | Done, tested |
+| Back end: swipes, match logic (everyone must say yes), `match_found` and `no_match` events | Done, tested |
 | Back end: real restaurant data, hosting, database | Not built yet |
 | Front end: Home, Join, Lobby, Swipe and Details screens | Done, still on mock data |
 | Front end: match screen, connection to the real server | Not built yet |

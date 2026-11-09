@@ -104,6 +104,12 @@ Response `200`, no match yet:
 { "ok": true, "match": null }
 ```
 
+Response `200`, everyone has swiped every place and nobody matched (show the "no match" screen):
+
+```json
+{ "ok": true, "match": null, "noMatch": true }
+```
+
 Response `200`, this swipe made a match:
 
 ```json
@@ -115,6 +121,7 @@ Rules:
 - A match needs **everyone** in the group to like the same place, and at least 2 people.
 - A person's first swipe on a place counts. Sending it again changes nothing, so retrying after a bad connection is safe.
 - Someone who joins later has to like the place too before it can match.
+- `noMatch` is `true` only when every member has swiped every place in the stack with no match. Nothing else about the stack changes, so "widen filters" means starting a new group for now.
 - Once a group has a match it keeps it. Every later swipe returns that same match, so a phone that missed `match_found` still finds out.
 
 ### Live updates
@@ -135,8 +142,9 @@ If the IDs don't belong to an open group, the connection is refused and `connect
 
 | Event | When | Payload |
 | --- | --- | --- |
-| `state` | Right after connecting, and again after every reconnect, so a phone that dropped catches up | `{ "members": [ … ], "match": null }`, or `"match": { "restaurant": { … } }` (same restaurant as `match_found`) once the group has matched |
+| `state` | Right after connecting, and again after every reconnect, so a phone that dropped catches up | `{ "members": [ … ], "match": null, "noMatch": false }`, or `"match": { "restaurant": { … } }` (same restaurant as `match_found`) once the group has matched |
 | `member_joined` | Someone joins the group | `{ "member": { "id": "m_b812", "nickname": "Davin" } }` |
+| `no_match` | Every member has swiped every place and nobody matched. Sent once; a person joining afterwards reopens the stack (`noMatch` goes back to false) | `{}` |
 | `match_found` | A swipe made a match | `{ "restaurant": { "id": "r_001", "name": "La Taqueria", "address": "2889 Mission St, San Francisco, CA", "hours": "11:00–21:00", "location": { "lat": 37.7509, "lng": -122.4181 } } }` |
 
 ## Errors

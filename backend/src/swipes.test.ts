@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Group } from "./groups.js";
 import type { Restaurant } from "./restaurants.js";
-import { recordSwipe } from "./swipes.js";
+import { isExhausted, recordSwipe } from "./swipes.js";
 
 const place = (id: string): Restaurant => ({
   id,
@@ -79,4 +79,22 @@ test("the first match stays, and only the first swipe reports it as new", () => 
   const later = recordSwipe(g, "b", place("r2"), true);
   assert.equal(later.match?.id, "r1");
   assert.equal(later.justMatched, false);
+});
+
+test("out of places: everyone swiped everything and nobody matched", () => {
+  const g = groupOf("a", "b");
+  recordSwipe(g, "a", place("r1"), true);
+  recordSwipe(g, "b", place("r1"), false);
+  assert.equal(isExhausted(g, 2), false); // r2 not swiped yet
+  recordSwipe(g, "a", place("r2"), false);
+  assert.equal(isExhausted(g, 2), false); // b hasn't swiped r2
+  recordSwipe(g, "b", place("r2"), true);
+  assert.equal(isExhausted(g, 2), true);
+});
+
+test("a match means the group is never out of places", () => {
+  const g = groupOf("a", "b");
+  recordSwipe(g, "a", place("r1"), true);
+  recordSwipe(g, "b", place("r1"), true);
+  assert.equal(isExhausted(g, 1), false);
 });

@@ -24,6 +24,8 @@ export interface Group {
   swipes: Map<string, Map<string, boolean>>;
   // Set once, when everyone has liked the same place
   match?: Restaurant;
+  // True while every member has swiped on every place and nobody matched
+  exhausted?: boolean;
   createdAt: number;
 }
 
@@ -123,5 +125,7 @@ export function joinGroup(joinCode: string, nickname: string) {
   }
   const member: Member = { id: newId("m"), nickname };
   group.members.push(member);
+  // A newcomer hasn't swiped yet, so the group isn't out of places any more
+  group.exhausted = false;
   return { groupId: group.id, memberId: member.id, members: group.members };
 }

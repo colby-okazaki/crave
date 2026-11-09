@@ -4,7 +4,7 @@ import { corsOrigin } from "./cors.js";
 import { ApiError, createGroup, findGroupForMember, joinGroup } from "./groups.js";
 import { emitToGroup } from "./live.js";
 import { mockProvider } from "./restaurants.js";
-import { matchPayload, recordSwipe } from "./swipes.js";
+import { isExhausted, matchPayload, recordSwipe } from "./swipes.js";
 
 function invalid(message: string): never {
   throw new ApiError(400, "INVALID_INPUT", message);
@@ -76,7 +76,13 @@ export function buildApp() {
 
     const { match, justMatched } = recordSwipe(group, memberId, restaurant, liked);
     if (justMatched) emitToGroup(group.id, "match_found", { restaurant: matchPayload(restaurant) });
-    res.json({ ok: true, match: match ? { restaurantId: match.id } : null });
+
+    // Tell the group once when everyone has run out of places with no match
+    const exhausted = isExhausted(group, stack.length);
+    if (exhausted && !group.exhausted) emitToGroup(group.id, "no_match", {});
+    group.exhausted = exhausted;
+
+    res.json({ ok: true, match: match ? { restaurantId: match.id } : null, noMatch: exhausted });
   });
 
   app.use((_req, _res, next) => {

@@ -39,3 +39,14 @@ export function recordSwipe(
 export function matchPayload(r: Restaurant) {
   return { id: r.id, name: r.name, address: r.address, hours: r.hours, location: r.location };
 }
+
+// True when every member has swiped on every place in the stack and nobody matched.
+// The front end shows "no match: widen filters or start over".
+export function isExhausted(group: Group, stackSize: number): boolean {
+  if (group.match || stackSize === 0 || group.members.length < MIN_MEMBERS_FOR_MATCH) return false;
+  let swipedAll = 0;
+  for (const votes of group.swipes.values()) {
+    if (group.members.every((m) => votes.has(m.id))) swipedAll++;
+  }
+  return swipedAll >= stackSize;
+}
