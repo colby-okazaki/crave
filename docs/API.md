@@ -110,6 +110,13 @@ Response `200`, this swipe made a match:
 { "ok": true, "match": { "restaurantId": "r_001" } }
 ```
 
+Rules:
+- Send `X-Member-Id`, like the restaurants request. Get the stack with `GET /groups/:id/restaurants` first; only places in that stack can be swiped.
+- A match needs **everyone** in the group to like the same place, and at least 2 people.
+- A person's first swipe on a place counts. Sending it again changes nothing, so retrying after a bad connection is safe.
+- Someone who joins later has to like the place too before it can match.
+- Once a group has a match it keeps it. Every later swipe returns that same match, so a phone that missed `match_found` still finds out.
+
 ### Live updates
 
 Live updates use [Socket.io](https://socket.io) (not a plain WebSocket). Connect to the server's base URL and pass the group and member IDs from the join response:
@@ -128,9 +135,9 @@ If the IDs don't belong to an open group, the connection is refused and `connect
 
 | Event | When | Payload |
 | --- | --- | --- |
-| `state` | Right after connecting, and again after every reconnect, so a phone that dropped catches up | `{ "members": [ … ], "match": null }` |
+| `state` | Right after connecting, and again after every reconnect, so a phone that dropped catches up | `{ "members": [ … ], "match": null }`, or `"match": { "restaurant": { … } }` (same restaurant as `match_found`) once the group has matched |
 | `member_joined` | Someone joins the group | `{ "member": { "id": "m_b812", "nickname": "Davin" } }` |
-| `match_found` | A swipe made a match (not built yet) | `{ "restaurant": { "id": "r_001", "name": "La Taqueria", "address": "2889 Mission St, San Francisco, CA", "hours": "11:00–21:00", "location": { "lat": 37.7509, "lng": -122.4181 } } }` |
+| `match_found` | A swipe made a match | `{ "restaurant": { "id": "r_001", "name": "La Taqueria", "address": "2889 Mission St, San Francisco, CA", "hours": "11:00–21:00", "location": { "lat": 37.7509, "lng": -122.4181 } } }` |
 
 ## Errors
 
@@ -152,7 +159,7 @@ Every error uses the same shape, so the front end can show `message` directly:
 
 ## Open questions
 
-- [ ] Match rule: everyone says yes, or a majority? (Draft assumes everyone.)
-- [ ] Does a person who joins late see the whole stack from the start?
+- [x] Match rule: everyone says yes (built that way).
+- [x] A person who joins late sees the whole stack from the start, and has to like a place for it to match.
 - [ ] How many restaurants per group? (Suggest 20 to start.)
 - [ ] Can the group creator change filters after people join?

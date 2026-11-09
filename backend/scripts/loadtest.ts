@@ -25,12 +25,16 @@ const createMs: number[] = [];
 const joinMs: number[] = [];
 const notifyMs: number[] = []; // POST /join sent -> host's phone gets member_joined
 const socketReadyMs: number[] = [];
+const restaurantsMs: number[] = [];
+const swipeMs: number[] = [];
+const matchNotifyMs: number[] = []; // last yes sent -> host's phone gets match_found
+let matches = 0;
 let errors = 0;
 
-async function post(path: string, body: unknown) {
+async function post(path: string, body: unknown, memberId?: string) {
   const res = await fetch(BASE_URL + path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(memberId ? { "X-Member-Id": memberId } : {}) },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`${path} -> ${res.status}`);
@@ -60,6 +64,7 @@ async function runGroup(g: number): Promise<Socket[]> {
     const host = await connect(created.groupId, created.memberId);
     sockets.push(host.socket);
     socketReadyMs.push(host.ms);
+    const memberIds = [created.memberId as string];
 
     // The event can land before the HTTP reply does, so log every arrival by member ID
     const arrivals = new Map<string, number>();
@@ -86,7 +91,30 @@ async function runGroup(g: number): Promise<Socket[]> {
       const phone = await connect(joined.groupId, joined.memberId);
       sockets.push(phone.socket);
       socketReadyMs.push(phone.ms);
+      memberIds.push(joined.memberId);
     }
+
+    // Everyone gets the stack, then everyone swipes yes on the first place
+    t = performance.now();
+    const stack = await fetch(`${BASE_URL}/groups/${created.groupId}/restaurants`, {
+      headers: { "X-Member-Id": created.memberId },
+    });
+    if (!stack.ok) throw new Error(`restaurants -> ${stack.status}`);
+    const { restaurants } = (await stack.json()) as { restaurants: { id: string }[] };
+    restaurantsMs.push(performance.now() - t);
+
+    const matchHeard = new Promise<number>((resolve, reject) => {
+      host.socket.once("match_found", () => resolve(performance.now()));
+      setTimeout(() => reject(new Error("match_found never arrived")), 5000);
+    });
+    let lastSentAt = 0;
+    for (const id of memberIds) {
+      lastSentAt = performance.now();
+      const reply = await post(`/groups/${created.groupId}/swipes`, { restaurantId: restaurants[0].id, liked: true }, id);
+      swipeMs.push(performance.now() - lastSentAt);
+      if (reply.match) matches++;
+    }
+    matchNotifyMs.push((await matchHeard) - lastSentAt);
   } catch (err) {
     errors++;
     console.error(`group ${g} failed:`, (err as Error).message);
@@ -108,10 +136,11 @@ function row(label: string, values: number[]): string {
 const started = performance.now();
 const all = (await Promise.all(Array.from({ length: GROUPS }, (_, g) => runGroup(g)))).flat();
 const seconds = (performance.now() - started) / 1000;
-const httpRequests = createMs.length + joinMs.length;
+const httpRequests = createMs.length + joinMs.length + restaurantsMs.length + swipeMs.length;
 
 console.log(`\nTarget: ${BASE_URL}`);
 console.log(`${GROUPS} groups x ${MEMBERS} members = ${GROUPS * MEMBERS} phones, run time ${seconds.toFixed(2)} s`);
+console.log(`Matches found: ${matches} of ${GROUPS} groups`);
 console.log(`Live sockets open at the end: ${all.length}, failed groups: ${errors}`);
 console.log(`HTTP requests: ${httpRequests} (${(httpRequests / seconds).toFixed(0)} per second)\n`);
 console.log("| Measurement (ms) | Samples | p50 | p95 | p99 | Max |");
@@ -120,6 +149,9 @@ console.log(row("POST /groups", createMs));
 console.log(row("POST /groups/:code/join", joinMs));
 console.log(row("Join to host notified (member_joined)", notifyMs));
 console.log(row("Socket connect to first state event", socketReadyMs));
+console.log(row("GET /groups/:id/restaurants", restaurantsMs));
+console.log(row("POST /groups/:id/swipes", swipeMs));
+console.log(row("Last yes to host notified (match_found)", matchNotifyMs));
 
 for (const s of all) s.disconnect();
 process.exit(errors > 0 ? 1 : 0);

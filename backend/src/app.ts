@@ -4,6 +4,7 @@ import { corsOrigin } from "./cors.js";
 import { ApiError, createGroup, findGroupForMember, joinGroup } from "./groups.js";
 import { emitToGroup } from "./live.js";
 import { mockProvider } from "./restaurants.js";
+import { matchPayload, recordSwipe } from "./swipes.js";
 
 function invalid(message: string): never {
   throw new ApiError(400, "INVALID_INPUT", message);
@@ -56,6 +57,26 @@ export function buildApp() {
     // Cache the request itself, so two phones asking at once share one search
     group.restaurants ??= mockProvider.search(group.location, group.filters);
     res.json({ restaurants: await group.restaurants });
+  });
+
+  app.post("/groups/:id/swipes", async (req, res) => {
+    const memberId = req.header("X-Member-Id") ?? "";
+    const group = findGroupForMember(req.params.id, memberId);
+    if (!group) {
+      throw new ApiError(404, "GROUP_NOT_FOUND", "That code doesn't match an open group.");
+    }
+    const { restaurantId, liked } = req.body ?? {};
+    if (typeof restaurantId !== "string" || typeof liked !== "boolean") {
+      invalid("A swipe needs a restaurantId (text) and liked (true or false).");
+    }
+    // Only places this group was actually shown can be swiped on
+    const stack = group.restaurants ? await group.restaurants : [];
+    const restaurant = stack.find((r) => r.id === restaurantId);
+    if (!restaurant) invalid("That restaurant isn't in this group's stack.");
+
+    const { match, justMatched } = recordSwipe(group, memberId, restaurant, liked);
+    if (justMatched) emitToGroup(group.id, "match_found", { restaurant: matchPayload(restaurant) });
+    res.json({ ok: true, match: match ? { restaurantId: match.id } : null });
   });
 
   app.use((_req, _res, next) => {

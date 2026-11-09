@@ -1,0 +1,81 @@
+import assert from "node:assert/strict";
+import type { AddressInfo } from "node:net";
+import { after, before, test } from "node:test";
+import { createServer, type Server } from "node:http";
+import { io } from "socket.io-client";
+import { buildApp } from "./app.js";
+import { attachLive } from "./live.js";
+
+let server: Server;
+let base = "";
+
+before(async () => {
+  server = createServer(buildApp());
+  attachLive(server);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  base = `http://localhost:${(server.address() as AddressInfo).port}`;
+});
+after(() => {
+  server.closeAllConnections();
+  server.close();
+});
+
+async function call(method: string, path: string, body?: unknown, memberId?: string) {
+  const res = await fetch(base + path, {
+    method,
+    headers: { "Content-Type": "application/json", ...(memberId ? { "X-Member-Id": memberId } : {}) },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  return { status: res.status, body: (await res.json()) as any };
+}
+
+async function newGroup(members: number) {
+  const host = (await call("POST", "/groups", {
+    nickname: "host",
+    location: { lat: 37.77, lng: -122.41 },
+    filters: {},
+  })).body;
+  const ids = [host.memberId as string];
+  for (let i = 1; i < members; i++) {
+    ids.push((await call("POST", `/groups/${host.joinCode}/join`, { nickname: `p${i}` })).body.memberId);
+  }
+  const list = (await call("GET", `/groups/${host.groupId}/restaurants`, undefined, ids[0])).body;
+  return { groupId: host.groupId as string, ids, restaurants: list.restaurants as { id: string }[] };
+}
+
+test("everyone liking the same place returns a match and tells every phone", async () => {
+  const { groupId, ids, restaurants } = await newGroup(3);
+  const socket = io(base, { auth: { groupId, memberId: ids[0] }, transports: ["websocket"] });
+  await new Promise((resolve) => socket.once("state", resolve));
+  const heard = new Promise<any>((resolve) => socket.once("match_found", resolve));
+
+  const target = restaurants[0].id;
+  assert.equal((await call("POST", `/groups/${groupId}/swipes`, { restaurantId: target, liked: true }, ids[0])).body.match, null);
+  assert.equal((await call("POST", `/groups/${groupId}/swipes`, { restaurantId: target, liked: true }, ids[1])).body.match, null);
+  const last = await call("POST", `/groups/${groupId}/swipes`, { restaurantId: target, liked: true }, ids[2]);
+  assert.deepEqual(last.body, { ok: true, match: { restaurantId: target } });
+  assert.equal((await heard).restaurant.id, target);
+  socket.disconnect();
+
+  // A phone that connects afterwards catches up through the state event
+  const late = io(base, { auth: { groupId, memberId: ids[1] }, transports: ["websocket"] });
+  const state = await new Promise<any>((resolve) => late.once("state", resolve));
+  assert.equal(state.match.restaurant.id, target);
+  late.disconnect();
+});
+
+test("bad swipes get clear errors", async () => {
+  const { groupId, ids, restaurants } = await newGroup(2);
+  const swipe = (body: unknown, who = ids[0]) => call("POST", `/groups/${groupId}/swipes`, body, who);
+
+  assert.equal((await swipe({ restaurantId: restaurants[0].id, liked: "yes" })).body.error.code, "INVALID_INPUT");
+  assert.equal((await swipe({ restaurantId: "nope", liked: true })).body.error.code, "INVALID_INPUT");
+  assert.equal((await swipe({ restaurantId: restaurants[0].id, liked: true }, "m_stranger")).status, 404);
+  assert.equal((await call("POST", "/groups/g_nope/swipes", { restaurantId: "x", liked: true }, ids[0])).status, 404);
+});
+
+test("swiping before the stack was ever fetched is refused", async () => {
+  const host = (await call("POST", "/groups", { nickname: "h", location: { lat: 1, lng: 1 }, filters: {} })).body;
+  const res = await call("POST", `/groups/${host.groupId}/swipes`, { restaurantId: "r_001", liked: true }, host.memberId);
+  assert.equal(res.body.error.code, "INVALID_INPUT");
+});

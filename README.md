@@ -21,11 +21,11 @@ Updated as each pull request merges. Last updated: 2026-11-07.
 | Area | State |
 | --- | --- |
 | Back end: create and join a group (4-digit codes), live member updates, old groups cleaned up | Done |
-| Back end: restaurants endpoint | Open pull request, fake data for now |
-| Back end: swipes, match logic, `match_found` event | Not built yet |
+| Back end: restaurants endpoint | Done, fake data for now |
+| Back end: swipes, match logic (everyone must say yes), `match_found` event | Done, tested |
 | Back end: real restaurant data, hosting, database | Not built yet |
-| Front end: Home and Join a group screens | Done, still on mock data |
-| Front end: swiping, match screen, connection to the real server | Not built yet |
+| Front end: Home, Join, Lobby, Swipe and Details screens | Done, still on mock data |
+| Front end: match screen, connection to the real server | Not built yet |
 
 Load-test numbers and repo stats are in [`STATS.md`](STATS.md).
 

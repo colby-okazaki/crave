@@ -18,7 +18,7 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 
 - [ ] Agree on the endpoints and response shapes in [`docs/API.md`](docs/API.md)
 - [ ] Decide what a restaurant card's data looks like (field names)
-- [ ] Decide what counts as a match: everyone says yes, or most people?
+- [x] Decide what counts as a match: everyone says yes, or most people? (Everyone.)
 - [ ] Decide what error messages look like
 - [ ] Set up the GitHub repo and add each other as collaborators
 
@@ -67,15 +67,15 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 - [ ] Map the provider's response to our card fields so the front end never sees provider-specific data
 
 **Swipes and matching**
-- [ ] `POST /groups/:id/swipes`: save one member's yes or no for one place
-- [ ] After each swipe, check whether every member said yes to that place
-- [ ] Return the match in the swipe response when this swipe made one
+- [x] `POST /groups/:id/swipes`: save one member's yes or no for one place
+- [x] After each swipe, check whether every member said yes to that place
+- [x] Return the match in the swipe response when this swipe made one
 - [ ] Handle the stack running out with no match
 
 **Live updates**
 - [x] Socket.io room per group
 - [x] Send `member_joined` when someone joins
-- [ ] Send `match_found` to every phone when a match happens
+- [x] Send `match_found` to every phone when a match happens
 - [x] Handle phones reconnecting (send current state on reconnect)
 
 **Launch**

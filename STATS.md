@@ -13,26 +13,23 @@ The load test starts a group per simulated host, joins the other members, and ke
 
 ## Back end load test
 
-Run on 2026-11-03, Mac with an Apple M3 chip (8 cores), Node 24. The server and the test ran on the same computer, over localhost, with groups stored in memory. No restaurant or swipe features existed yet, so this covers creating groups, joining, and live updates only.
+Run on 2026-11-07, Mac with an Apple M3 chip (8 cores), Node 24. The server and the test ran on the same computer, over localhost, with groups stored in memory and fake restaurant data. Each group creates, joins, loads the restaurant stack, and then everyone swipes yes on the same place.
 
-Run: 200 groups x 6 members = **1,200 phones connected at once**, 0 failures, finished in 0.48 s.
+Run: 200 groups x 6 members = **1,200 phones connected at once**, 0 failures, **200 of 200 groups matched**, 2,600 HTTP requests in 0.53 s (about 4,900 per second).
 
 | Measurement (ms) | Samples | p50 | p95 | p99 | Max |
 | --- | --- | --- | --- | --- | --- |
-| `POST /groups` | 200 | 76.2 | 91.1 | 95.6 | 96.0 |
-| `POST /groups/:code/join` | 1000 | 25.0 | 31.6 | 33.0 | 33.5 |
-| Join to host's phone notified (`member_joined`) | 1000 | 23.5 | 31.5 | 32.9 | 33.5 |
-| Socket connect to first `state` event | 1200 | 43.0 | 69.9 | 73.0 | 74.8 |
+| `POST /groups` | 200 | 62.6 | 80.5 | 82.9 | 83.1 |
+| `POST /groups/:code/join` | 1000 | 16.2 | 31.1 | 33.7 | 34.2 |
+| Join to host's phone notified (`member_joined`) | 1000 | 15.4 | 24.3 | 33.6 | 34.1 |
+| Socket connect to first `state` event | 1200 | 39.5 | 59.8 | 63.8 | 70.1 |
+| `GET /groups/:id/restaurants` | 200 | 11.3 | 14.2 | 15.3 | 38.8 |
+| `POST /groups/:id/swipes` | 1200 | 12.5 | 39.7 | 41.6 | 42.0 |
+| Last yes to host's phone notified (`match_found`) | 200 | 12.5 | 14.7 | 16.2 | 40.1 |
 
-Smaller runs, same machine:
+How to read these: p50 is the typical request, p95 means 95 out of 100 were faster than that, and p99 is the slow tail. "Last yes to host notified" is the real-time number: the time from the final friend tapping yes until the host's phone gets the match.
 
-| Phones connected | Failures | HTTP requests per second | p95 join to host notified (ms) |
-| --- | --- | --- | --- |
-| 50 (10 groups x 5) | 0 | 520 | 3.4 |
-| 300 (50 groups x 6) | 0 | 2,036 | 7.5 |
-| 1,200 (200 groups x 6) | 0 | 2,512 | 31.5 |
-
-How to read these: p50 is the typical request, p95 means 95 out of 100 were faster than that, and p99 is the slow tail. "Join to host notified" is the real-time number: the time from one friend tapping join until the host's phone gets the "someone joined" event.
+Also measured: `npm test` runs 10 automated tests (match rule, repeats, late joiners, errors, live `match_found`).
 
 ## Repo facts
 
