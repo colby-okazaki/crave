@@ -70,7 +70,7 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 - [x] `POST /groups/:id/swipes`: save one member's yes or no for one place
 - [x] After each swipe, check whether every member said yes to that place
 - [x] Return the match in the swipe response when this swipe made one
-- [ ] Handle the stack running out with no match
+- [x] Handle the stack running out with no match
 
 **Live updates**
 - [x] Socket.io room per group

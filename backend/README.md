@@ -45,6 +45,7 @@ The front end is a web app on a different address (for example `http://localhost
 | `GET /groups/:id/restaurants` | Works, but returns the fake data in `docs/mock/` until we connect Google Places or Yelp |
 | `POST /groups/:id/swipes` | Done. A match needs everyone to like the same place (at least 2 people) |
 | Socket.io: `state` and `member_joined` events | Done |
+| Socket.io: `no_match` event (everyone swiped everything, nobody matched) | Done |
 | Socket.io: `match_found` event, and `state` carries the match for phones that reconnect | Done |
 
 Tasks: see [`../TASKS.md`](../TASKS.md#back-end-colby).

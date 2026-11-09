@@ -40,7 +40,7 @@ async function newGroup(members: number) {
     ids.push((await call("POST", `/groups/${host.joinCode}/join`, { nickname: `p${i}` })).body.memberId);
   }
   const list = (await call("GET", `/groups/${host.groupId}/restaurants`, undefined, ids[0])).body;
-  return { groupId: host.groupId as string, ids, restaurants: list.restaurants as { id: string }[] };
+  return { groupId: host.groupId as string, joinCode: host.joinCode as string, ids, restaurants: list.restaurants as { id: string }[] };
 }
 
 test("everyone liking the same place returns a match and tells every phone", async () => {
@@ -53,7 +53,7 @@ test("everyone liking the same place returns a match and tells every phone", asy
   assert.equal((await call("POST", `/groups/${groupId}/swipes`, { restaurantId: target, liked: true }, ids[0])).body.match, null);
   assert.equal((await call("POST", `/groups/${groupId}/swipes`, { restaurantId: target, liked: true }, ids[1])).body.match, null);
   const last = await call("POST", `/groups/${groupId}/swipes`, { restaurantId: target, liked: true }, ids[2]);
-  assert.deepEqual(last.body, { ok: true, match: { restaurantId: target } });
+  assert.deepEqual(last.body, { ok: true, match: { restaurantId: target }, noMatch: false });
   assert.equal((await heard).restaurant.id, target);
   socket.disconnect();
 
@@ -78,4 +78,38 @@ test("swiping before the stack was ever fetched is refused", async () => {
   const host = (await call("POST", "/groups", { nickname: "h", location: { lat: 1, lng: 1 }, filters: {} })).body;
   const res = await call("POST", `/groups/${host.groupId}/swipes`, { restaurantId: "r_001", liked: true }, host.memberId);
   assert.equal(res.body.error.code, "INVALID_INPUT");
+});
+
+test("everyone saying no to everything fires no_match once, and a late joiner reopens it", async () => {
+  const { groupId, joinCode, ids, restaurants } = await newGroup(2);
+  const socket = io(base, { auth: { groupId, memberId: ids[0] }, transports: ["websocket"] });
+  await new Promise((resolve) => socket.once("state", resolve));
+  let events = 0;
+  socket.on("no_match", () => events++);
+  const heard = new Promise((resolve) => socket.once("no_match", resolve));
+
+  let last: any;
+  for (const r of restaurants) {
+    for (const who of ids) {
+      last = await call("POST", `/groups/${groupId}/swipes`, { restaurantId: r.id, liked: false }, who);
+    }
+  }
+  assert.equal(last.body.noMatch, true);
+  await heard;
+
+  // Sending a swipe again must not announce it a second time
+  await call("POST", `/groups/${groupId}/swipes`, { restaurantId: restaurants[0].id, liked: false }, ids[0]);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(events, 1);
+
+  const fresh = io(base, { auth: { groupId, memberId: ids[1] }, transports: ["websocket"] });
+  assert.equal((await new Promise<any>((resolve) => fresh.once("state", resolve))).noMatch, true);
+  fresh.disconnect();
+
+  // Someone joining afterwards hasn't swiped, so the group has places left again
+  const joined = (await call("POST", `/groups/${joinCode}/join`, { nickname: "late" })).body;
+  const again = io(base, { auth: { groupId, memberId: joined.memberId }, transports: ["websocket"] });
+  assert.equal((await new Promise<any>((resolve) => again.once("state", resolve))).noMatch, false);
+  again.disconnect();
+  socket.disconnect();
 });
