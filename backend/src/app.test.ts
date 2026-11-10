@@ -4,6 +4,7 @@ import { after, before, test } from "node:test";
 import { createServer, type Server } from "node:http";
 import { io } from "socket.io-client";
 import { buildApp } from "./app.js";
+import { ApiError } from "./groups.js";
 import { attachLive } from "./live.js";
 
 let server: Server;
@@ -112,4 +113,30 @@ test("everyone saying no to everything fires no_match once, and a late joiner re
   assert.equal((await new Promise<any>((resolve) => again.once("state", resolve))).noMatch, false);
   again.disconnect();
   socket.disconnect();
+});
+
+test("if finding restaurants fails, the next request tries again", async () => {
+  let calls = 0;
+  const flaky = {
+    async search() {
+      calls++;
+      if (calls === 1) throw new ApiError(503, "RESTAURANTS_UNAVAILABLE", "Couldn't load restaurants right now.");
+      return [];
+    },
+  };
+  const own = createServer(buildApp(flaky));
+  await new Promise<void>((resolve) => own.listen(0, resolve));
+  const url = `http://localhost:${(own.address() as AddressInfo).port}`;
+  const post = (path: string, body: unknown) =>
+    fetch(url + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json() as Promise<any>);
+  const host = await post("/groups", { nickname: "h", location: { lat: 1, lng: 1 }, filters: {} });
+  const get = () => fetch(`${url}/groups/${host.groupId}/restaurants`, { headers: { "X-Member-Id": host.memberId } });
+
+  const first = await get();
+  assert.equal(first.status, 503);
+  assert.equal(((await first.json()) as any).error.code, "RESTAURANTS_UNAVAILABLE");
+  const second = await get();
+  assert.equal(second.status, 200);
+  own.closeAllConnections();
+  own.close();
 });

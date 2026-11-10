@@ -3,7 +3,8 @@ import express, { type ErrorRequestHandler } from "express";
 import { corsOrigin } from "./cors.js";
 import { ApiError, createGroup, findGroupForMember, joinGroup } from "./groups.js";
 import { emitToGroup } from "./live.js";
-import { mockProvider } from "./restaurants.js";
+import { restaurantProvider } from "./providers.js";
+import type { RestaurantProvider } from "./restaurants.js";
 import { isExhausted, matchPayload, recordSwipe } from "./swipes.js";
 
 function invalid(message: string): never {
@@ -25,7 +26,7 @@ function readLocation(value: any): { lat: number; lng: number } {
   return { lat, lng };
 }
 
-export function buildApp() {
+export function buildApp(provider: RestaurantProvider = restaurantProvider) {
   const app = express();
   app.use(cors({ origin: corsOrigin }));
   app.use(express.json());
@@ -55,7 +56,14 @@ export function buildApp() {
       throw new ApiError(404, "GROUP_NOT_FOUND", "That code doesn't match an open group.");
     }
     // Cache the request itself, so two phones asking at once share one search
-    group.restaurants ??= mockProvider.search(group.location, group.filters);
+    if (!group.restaurants) {
+      const search = provider.search(group.location, group.filters);
+      group.restaurants = search;
+      // If it fails, forget it so the next request tries again instead of failing forever
+      search.catch(() => {
+        if (group.restaurants === search) group.restaurants = undefined;
+      });
+    }
     res.json({ restaurants: await group.restaurants });
   });
 

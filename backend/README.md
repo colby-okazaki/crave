@@ -18,7 +18,7 @@ Owns the data, the rules, and keeping everyone's phone in sync.
 
 ## Secrets
 
-Copy `.env.example` to `.env` and fill it in. `.env` is git-ignored; never commit keys, and never send them to the front end.
+Copy `.env.example` to `.env` and fill it in. The server reads `.env` on start. `.env` is git-ignored; never commit keys, and never send them to the front end.
 
 ## Stack
 
@@ -42,7 +42,7 @@ The front end is a web app on a different address (for example `http://localhost
 | --- | --- |
 | `POST /groups` | Done |
 | `POST /groups/:code/join` | Done |
-| `GET /groups/:id/restaurants` | Works, but returns the fake data in `docs/mock/` until we connect Google Places or Yelp |
+| `GET /groups/:id/restaurants` | Fake data in `docs/mock/` by default. With `RESTAURANT_SOURCE=osm` in `.env` it returns real places from OpenStreetMap (free, no key, but no photos, prices or ratings, and the public servers are sometimes busy) |
 | `POST /groups/:id/swipes` | Done. A match needs everyone to like the same place (at least 2 people) |
 | Socket.io: `state` and `member_joined` events | Done |
 | Socket.io: `no_match` event (everyone swiped everything, nobody matched) | Done |

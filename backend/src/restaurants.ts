@@ -4,13 +4,16 @@ import type { Filters } from "./groups.js";
 export interface Restaurant {
   id: string;
   name: string;
-  photoUrl: string;
-  price: number;
-  rating: number;
+  // null when the source doesn't know (OpenStreetMap has no photos, prices or ratings)
+  photoUrl: string | null;
+  price: number | null;
+  rating: number | null;
   distanceMeters: number;
   address: string;
-  hours: string;
+  hours: string | null;
   location: { lat: number; lng: number };
+  cuisine?: string;
+  menuUrl?: string;
 }
 
 // Anything that can find restaurants near a point. The real Google Places or Yelp
@@ -30,7 +33,7 @@ export const mockProvider: RestaurantProvider = {
     return restaurants.filter(
       (r) =>
         (filters.radiusMeters === undefined || r.distanceMeters <= filters.radiusMeters) &&
-        (!filters.price?.length || filters.price.includes(r.price)),
+        (!filters.price?.length || r.price === null || filters.price.includes(r.price)),
     );
   },
 };

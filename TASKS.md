@@ -62,9 +62,9 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 - [x] Close old groups after a while (e.g. 24 hours)
 
 **Restaurant data**
-- [ ] `GET /groups/:id/restaurants`: fetch nearby places using the group's filters (endpoint works with fake data; real provider still to do)
+- [ ] `GET /groups/:id/restaurants`: fetch nearby places using the group's filters (works with fake data; OpenStreetMap provider built, still to try against the live servers)
 - [x] Every member gets the same stack in the same order (fetch once per group and store it)
-- [ ] Map the provider's response to our card fields so the front end never sees provider-specific data
+- [x] Map the provider's response to our card fields so the front end never sees provider-specific data (done for OpenStreetMap)
 
 **Swipes and matching**
 - [x] `POST /groups/:id/swipes`: save one member's yes or no for one place
