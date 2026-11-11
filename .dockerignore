@@ -1,0 +1,7 @@
+# Keep secrets and bulk out of the image
+**/node_modules
+**/.env
+**/.env.*
+.git
+frontend
+resume

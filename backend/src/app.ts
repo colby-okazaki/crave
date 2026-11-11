@@ -4,6 +4,7 @@ import { corsOrigin } from "./cors.js";
 import { ApiError, createGroup, findGroupForMember, joinGroup } from "./groups.js";
 import { emitToGroup } from "./live.js";
 import { mockProvider } from "./restaurants.js";
+import { createLimiters } from "./ratelimit.js";
 import { isExhausted, matchPayload, recordSwipe } from "./swipes.js";
 
 function invalid(message: string): never {
@@ -27,23 +28,28 @@ function readLocation(value: any): { lat: number; lng: number } {
 
 export function buildApp() {
   const app = express();
+  // Behind a host's proxy, set TRUST_PROXY to how many proxies sit in front (usually 1)
+  // so limits count each visitor's real address instead of the proxy's
+  if (process.env.TRUST_PROXY) app.set("trust proxy", Number(process.env.TRUST_PROXY));
+  const limits = createLimiters();
   app.use(cors({ origin: corsOrigin }));
+  app.use(limits.general);
   app.use(express.json());
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
   });
 
-  app.post("/groups", (req, res) => {
+  app.post("/groups", limits.create, (req, res) => {
     const nickname = readNickname(req.body?.nickname);
     const location = readLocation(req.body?.location);
     const filters = req.body?.filters ?? {};
     res.status(201).json(createGroup({ nickname, location, filters }));
   });
 
-  app.post("/groups/:code/join", (req, res) => {
+  app.post("/groups/:code/join", limits.join, (req, res) => {
     const nickname = readNickname(req.body?.nickname);
-    const result = joinGroup(req.params.code, nickname);
+    const result = joinGroup(String(req.params.code), nickname);
     const member = result.members.find((m) => m.id === result.memberId);
     emitToGroup(result.groupId, "member_joined", { member });
     res.json(result);
