@@ -7,7 +7,7 @@ Numbers we can back up, kept here so the resume blurb is easy to write later. Ev
 | What | Command | Measures |
 | --- | --- | --- |
 | Repo facts | `./scripts/repo-stats.sh` | Commits, contributors, PRs merged, code size, endpoints, tests |
-| Back end performance | `cd backend && npm run dev`, then in a second terminal `npm run loadtest -- --groups 200 --members 6` | Response times and live-update delay with many phones connected |
+| Back end performance | `cd backend && RATE_LIMIT=off npm run dev`, then in a second terminal `npm run loadtest -- --groups 200 --members 6` | Response times and live-update delay with many phones connected |
 
 The load test starts a group per simulated host, joins the other members, and keeps every phone on a live Socket.io connection. `--groups` and `--members` set the size.
 

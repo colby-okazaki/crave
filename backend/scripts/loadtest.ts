@@ -2,7 +2,9 @@
 //
 //   npm run loadtest -- --groups 50 --members 6
 //
-// Targets BASE_URL (default http://localhost:3000). Start the server first.
+// Targets BASE_URL (default http://localhost:3000). Start the server first, with the
+// rate limits off (one computer making hundreds of groups would hit them):
+//   RATE_LIMIT=off npm run dev
 // Prints a markdown table of measured results to paste into STATS.md.
 
 import { io, type Socket } from "socket.io-client";

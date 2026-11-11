@@ -36,6 +36,21 @@ The server starts on `http://localhost:3000` (set `PORT` to change it). Check it
 
 The front end is a web app on a different address (for example `http://localhost:5173`, or a phone opening the Vite Network URL), so the server sends CORS headers. By default it allows any origin, which is fine for local work. Before deploying, set `CORS_ORIGIN` in `.env` to the front end's real address.
 
+## Rate limits
+
+Join codes are only 4 digits, so one address is limited to 10 wrong join attempts a minute (successful joins don't count, so a whole table can join together), 20 new groups a minute, and 300 requests a minute overall. Over the limit the server answers `429` with `RATE_LIMITED`. Behind a host's proxy, set `TRUST_PROXY=1` so visitors are counted by their real address. Set `RATE_LIMIT=off` only for the load test or local testing.
+
+## Run it in Docker
+
+Run from the repo root (the build needs `docs/mock/`):
+
+```bash
+docker build -f backend/Dockerfile -t crave-backend .
+docker run --rm -p 3000:3000 --env-file backend/.env crave-backend
+```
+
+The image runs as a normal (non-root) user and never contains `.env`; pass settings with `--env-file` or your host's environment settings. This is what we'll hand to a host when we put the server online. Groups still live in memory, so they reset when the container restarts.
+
 ## What works so far
 
 | Endpoint | Status |

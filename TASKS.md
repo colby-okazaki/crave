@@ -79,6 +79,6 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 - [x] Handle phones reconnecting (send current state on reconnect)
 
 **Launch**
-- [ ] Host the server and database online so it works on real phones
+- [ ] Host the server and database online so it works on real phones (Docker image and rate limits are ready; pick a host)
 - [ ] Share the live base URL with Davin
 - [ ] Fix what breaks during the dinner test

@@ -168,6 +168,7 @@ Every error uses the same shape, so the front end can show `message` directly:
 | `INVALID_INPUT` | 400 | Missing or bad fields |
 | `NO_RESTAURANTS` | 200 + empty list | Nothing matched the filters (not an error; show the "widen filters" screen) |
 | `RESTAURANTS_UNAVAILABLE` | 503 | The restaurant source is busy or down. Safe to retry; the next request tries again |
+| `RATE_LIMITED` | 429 | Too many wrong join codes (10 a minute), too many groups created (20 a minute), or too many requests overall (300 a minute) from one address. Show `message`; the `Retry-After` header says how many seconds to wait |
 | `SERVER_BUSY` | 503 | Every join code is in use (rare; try again shortly) |
 | `SERVER_ERROR` | 500 | Anything else |
 
