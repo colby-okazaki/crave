@@ -10,6 +10,8 @@ let server: Server;
 let base = "";
 
 before(async () => {
+  // These tests make many groups from one address, so the rate limits stay off here
+  process.env.RATE_LIMIT = "off";
   server = createServer(buildApp());
   attachLive(server);
   await new Promise<void>((resolve) => server.listen(0, resolve));
