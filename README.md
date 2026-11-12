@@ -29,19 +29,33 @@ The full task split is in [`TASKS.md`](TASKS.md). Measured numbers for the resum
 
 ## Status
 
-Updated as each pull request merges. Last updated: 2026-11-07.
+Updated as each pull request merges. Last updated: 2026-11-12.
+
+**Done so far**
 
 | Area | State |
 | --- | --- |
 | Back end: create and join a group (4-digit codes), live member updates, old groups cleaned up | Done |
 | Back end: restaurants endpoint | Done, fake data for now |
 | Back end: swipes, match logic (everyone must say yes), `match_found` and `no_match` events | Done, tested |
-| Back end: rate limits on joining and creating groups, Docker setup for hosting | Done (open pull request) |
-| Back end: hosting it online, database | Not built yet |
+| Back end: rate limits on joining and creating groups, Docker setup for hosting | Done |
+| Back end: load tested | 1,200 phones connected at once, 0 failures ([`STATS.md`](STATS.md)) |
 | Front end: Home, Join, Lobby, Swipe and Details screens | Done, still on mock data |
-| Front end: match screen, connection to the real server | Not built yet |
+| Both: API contract in [`docs/API.md`](docs/API.md), and the front end and back end agree on the 4-digit code format | Done |
 
-Load-test numbers and repo stats are in [`STATS.md`](STATS.md).
+**In progress**
+
+| Area | State |
+| --- | --- |
+| Back end: real restaurant data from OpenStreetMap (free, no key) | Open pull request; waiting for the front end to handle missing photos, prices and ratings |
+
+**Next**
+
+| Area | Owner |
+| --- | --- |
+| Front end: match screen, "no match" screen, connect every screen to the real server | Davin |
+| Back end: host the server online, add a database | Colby |
+| Both: decide how a typed location becomes coordinates, then test with a real group at dinner | Both |
 
 ## Run it locally
 
