@@ -87,8 +87,13 @@ Every member gets the same list in the same order. See [`mock/restaurants.json`]
 }
 ```
 
-- `price`: 1–4 (shown as $ to $$$$)
-- `rating`: 0–5, one decimal
+- `price`: 1–4 (shown as $ to $$$$), or `null` if the source doesn't know
+- `rating`: 0–5, one decimal, or `null` if the source doesn't know
+- `photoUrl`: a picture, or `null`. Show a placeholder image.
+- `hours`: today's opening hours as one line, or `null`. Hide the line.
+- `cuisine` and `menuUrl` are optional. They appear when the source has them.
+
+With real data (OpenStreetMap, free) every place has a name, address and location, but price, rating and photo are usually `null`. The fake data in `mock/` has them filled in. Up to 20 places come back, nearest first.
 
 ### Send a swipe
 
@@ -162,6 +167,7 @@ Every error uses the same shape, so the front end can show `message` directly:
 | `NICKNAME_TAKEN` | 409 | Someone in the group already has that nickname |
 | `INVALID_INPUT` | 400 | Missing or bad fields |
 | `NO_RESTAURANTS` | 200 + empty list | Nothing matched the filters (not an error; show the "widen filters" screen) |
+| `RESTAURANTS_UNAVAILABLE` | 503 | The restaurant source is busy or down. Safe to retry; the next request tries again |
 | `RATE_LIMITED` | 429 | Too many wrong join codes (10 a minute), too many groups created (20 a minute), or too many requests overall (300 a minute) from one address. Show `message`; the `Retry-After` header says how many seconds to wait |
 | `SERVER_BUSY` | 503 | Every join code is in use (rare; try again shortly) |
 | `SERVER_ERROR` | 500 | Anything else |

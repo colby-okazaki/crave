@@ -36,7 +36,7 @@ Updated as each pull request merges. Last updated: 2026-11-12.
 | Area | State |
 | --- | --- |
 | Back end: create and join a group (4-digit codes), live member updates, old groups cleaned up | Done |
-| Back end: restaurants endpoint | Done, fake data for now |
+| Back end: restaurants endpoint | Done. Fake data by default; real OpenStreetMap places behind a setting (open pull request, not tried against the live servers yet) |
 | Back end: swipes, match logic (everyone must say yes), `match_found` and `no_match` events | Done, tested |
 | Back end: rate limits on joining and creating groups, Docker setup for hosting | Done |
 | Back end: load tested | 1,200 phones connected at once, 0 failures ([`STATS.md`](STATS.md)) |
