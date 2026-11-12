@@ -4,6 +4,19 @@
 
 A group of friends can't agree on where to eat. Everyone swipes yes or no on nearby restaurants, and the app shows a match when the whole group likes the same place.
 
+## Tech stack
+
+| Part | Built with |
+| --- | --- |
+| Language | **TypeScript** on both the front end and the back end |
+| Front end | **React 19**, **Vite**, React Router, CSS modules (a mobile-first web app) |
+| Back end | **Node.js 24**, **Express 5**, **Socket.io** for live updates |
+| Data | In-memory groups for now (database planned); restaurants from fake data, with a free **OpenStreetMap** source in progress |
+| Testing | Node's built-in test runner (`npm test`), plus a load test (`npm run loadtest`) |
+| Tooling | Docker image for the server, rate limiting, GitHub pull requests |
+
+Back end numbers, measured by a script in this repo: 1,200 phones connected at once with 0 failures. See [`STATS.md`](STATS.md).
+
 ## Who owns what
 
 | Area | Owner | Folder |
