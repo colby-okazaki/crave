@@ -52,7 +52,7 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 
 **Setup**
 - [x] Pick the stack (language, framework, database) and write it in `backend/README.md`
-- [ ] Pick the restaurant API (Google Places or Yelp); get a key; note the free-tier limits
+- [x] Pick the restaurant API: OpenStreetMap, free and no key (Nominatim: 1 request a second, so cached; a paid provider can replace it later)
 - [ ] Keep keys in `backend/.env` only
 
 **Groups**
@@ -62,7 +62,7 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 - [x] Close old groups after a while (e.g. 24 hours)
 
 **Restaurant data**
-- [ ] `GET /groups/:id/restaurants`: fetch nearby places using the group's filters (works with fake data; OpenStreetMap provider built, still to try against the live servers)
+- [x] `GET /groups/:id/restaurants`: fetch nearby places using the group's filters (fake data by default; real OpenStreetMap data with `RESTAURANT_SOURCE=osm`)
 - [x] Every member gets the same stack in the same order (fetch once per group and store it)
 - [x] Map the provider's response to our card fields so the front end never sees provider-specific data (done for OpenStreetMap)
 
