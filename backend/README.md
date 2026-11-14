@@ -57,7 +57,7 @@ The image runs as a normal (non-root) user and never contains `.env`; pass setti
 | --- | --- |
 | `POST /groups` | Done |
 | `POST /groups/:code/join` | Done |
-| `GET /groups/:id/restaurants` | Fake data in `docs/mock/` by default. With `RESTAURANT_SOURCE=osm` in `.env` it returns real places from OpenStreetMap (free, no key, but no photos, prices or ratings, and the public servers are sometimes busy) |
+| `GET /groups/:id/restaurants` | Fake data in `docs/mock/` by default. With `RESTAURANT_SOURCE=osm` in `.env` it returns real places from OpenStreetMap (free, no key): Nominatim first, the Overpass servers as a backup. No prices or ratings, and photos, hours and websites only when the map has them. Tried against the live service: 20 places in about 1.4 s |
 | `POST /groups/:id/swipes` | Done. A match needs everyone to like the same place (at least 2 people) |
 | Socket.io: `state` and `member_joined` events | Done |
 | Socket.io: `no_match` event (everyone swiped everything, nobody matched) | Done |

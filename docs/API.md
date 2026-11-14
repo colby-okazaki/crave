@@ -93,7 +93,7 @@ Every member gets the same list in the same order. See [`mock/restaurants.json`]
 - `hours`: today's opening hours as one line, or `null`. Hide the line.
 - `cuisine` and `menuUrl` are optional. They appear when the source has them.
 
-With real data (OpenStreetMap, free) every place has a name, address and location, but price, rating and photo are usually `null`. The fake data in `mock/` has them filled in. Up to 20 places come back, nearest first.
+With real data (OpenStreetMap, free) every place has a name, address and location. Price and rating are always `null`; photo, hours and menu link are filled in only when OpenStreetMap has them, which is for some places and not others. The fake data in `mock/` has them filled in. Up to 20 places come back, nearest first.
 
 ### Send a swipe
 
