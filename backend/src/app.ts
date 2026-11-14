@@ -3,7 +3,8 @@ import express, { type ErrorRequestHandler } from "express";
 import { corsOrigin } from "./cors.js";
 import { ApiError, createGroup, findGroupForMember, joinGroup } from "./groups.js";
 import { emitToGroup } from "./live.js";
-import { restaurantProvider } from "./providers.js";
+import { placeFinder, restaurantProvider } from "./providers.js";
+import type { PlaceFinder } from "./places.js";
 import type { RestaurantProvider } from "./restaurants.js";
 import { createLimiters } from "./ratelimit.js";
 import { isExhausted, matchPayload, recordSwipe } from "./swipes.js";
@@ -27,7 +28,7 @@ function readLocation(value: any): { lat: number; lng: number } {
   return { lat, lng };
 }
 
-export function buildApp(provider: RestaurantProvider = restaurantProvider) {
+export function buildApp(provider: RestaurantProvider = restaurantProvider, finder: PlaceFinder = placeFinder) {
   const app = express();
   // Behind a host's proxy, set TRUST_PROXY to how many proxies sit in front (usually 1)
   // so limits count each visitor's real address instead of the proxy's
@@ -39,6 +40,13 @@ export function buildApp(provider: RestaurantProvider = restaurantProvider) {
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
+  });
+
+  // Typed location -> coordinates, for the screen where someone picks where to eat
+  app.get("/geocode", limits.geocode, async (req, res) => {
+    const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    if (q.length < 2 || q.length > 100) invalid("Type at least 2 characters (up to 100) to search for a place.");
+    res.json({ places: await finder.search(q) });
   });
 
   app.post("/groups", limits.create, (req, res) => {

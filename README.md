@@ -29,7 +29,7 @@ The full task split is in [`TASKS.md`](TASKS.md). Measured numbers for the resum
 
 ## Status
 
-Updated as each pull request merges. Last updated: 2026-11-13.
+Updated as each pull request merges. Last updated: 2026-11-14.
 
 **Done so far**
 
@@ -40,6 +40,7 @@ Updated as each pull request merges. Last updated: 2026-11-13.
 | Back end: swipes, match logic (everyone must say yes), `match_found` and `no_match` events | Done, tested |
 | Back end: rate limits on joining and creating groups, Docker setup for hosting | Done |
 | Back end: real restaurant data from OpenStreetMap (free, no key), switched on with `RESTAURANT_SOURCE=osm` | Done, tried live: 20 places in about 1.4 s. No prices or ratings, so the front end must handle empty fields |
+| Back end: place search, so a typed location becomes coordinates (`GET /geocode`) | Done, tried live |
 | Back end: load tested | 1,200 phones connected at once, 0 failures ([`STATS.md`](STATS.md)) |
 | Front end: Home, Join, Lobby, Swipe and Details screens | Done, still on mock data |
 | Both: API contract in [`docs/API.md`](docs/API.md), and the front end and back end agree on the 4-digit code format | Done |
@@ -48,9 +49,9 @@ Updated as each pull request merges. Last updated: 2026-11-13.
 
 | Area | Owner |
 | --- | --- |
-| Front end: match screen, "no match" screen, connect every screen to the real server | Davin |
+| Front end: let people type a place (or use the phone's location), match screen, "no match" screen, connect every screen to the real server | Davin |
 | Back end: host the server online, add a database | Colby |
-| Both: decide how a typed location becomes coordinates, then test with a real group at dinner | Both |
+| Both: test with a real group at dinner | Both |
 
 ## Run it locally
 

@@ -57,6 +57,7 @@ The image runs as a normal (non-root) user and never contains `.env`; pass setti
 | --- | --- |
 | `POST /groups` | Done |
 | `POST /groups/:code/join` | Done |
+| `GET /geocode?q=` | Done. Typed place to coordinates (OpenStreetMap Nominatim with `RESTAURANT_SOURCE=osm`, one fake answer otherwise) |
 | `GET /groups/:id/restaurants` | Fake data in `docs/mock/` by default. With `RESTAURANT_SOURCE=osm` in `.env` it returns real places from OpenStreetMap (free, no key): Nominatim first, the Overpass servers as a backup. No prices or ratings, and photos, hours and websites only when the map has them. Tried against the live service: 20 places in about 1.4 s |
 | `POST /groups/:id/swipes` | Done. A match needs everyone to like the same place (at least 2 people) |
 | Socket.io: `state` and `member_joined` events | Done |

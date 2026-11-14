@@ -7,6 +7,7 @@ import { rateLimit } from "express-rate-limit";
 // - join: only failed attempts count (wrong code, taken nickname), so six friends on the
 //   same Wi-Fi joining one group at dinner never run into it
 // - create: stops one address from filling up all the codes
+// - geocode: place searches go to a shared outside service, so keep one address polite
 // - general: a loose ceiling on everything else
 //
 // RATE_LIMIT=off turns them all off (used by the tests and the load test).
@@ -25,14 +26,15 @@ function limiter(max: number, options: { failedOnly?: boolean } = {}): RequestHa
   });
 }
 
-export function createLimiters(): { general: RequestHandler; create: RequestHandler; join: RequestHandler } {
+export function createLimiters(): { general: RequestHandler; create: RequestHandler; join: RequestHandler; geocode: RequestHandler } {
   if (process.env.RATE_LIMIT === "off") {
     const pass: RequestHandler = (_req, _res, next) => next();
-    return { general: pass, create: pass, join: pass };
+    return { general: pass, create: pass, join: pass, geocode: pass };
   }
   return {
     general: limiter(300),
     create: limiter(20),
     join: limiter(10, { failedOnly: true }),
+    geocode: limiter(30),
   };
 }
