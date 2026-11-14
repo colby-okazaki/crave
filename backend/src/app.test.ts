@@ -142,3 +142,22 @@ test("if finding restaurants fails, the next request tries again", async () => {
   own.closeAllConnections();
   own.close();
 });
+
+test("/geocode finds places for a typed location and rejects bad searches", async () => {
+  const finder = { search: async (q: string) => [{ label: `${q}, California`, lat: 1, lng: 2 }] };
+  const own = createServer(buildApp(undefined, finder));
+  await new Promise<void>((resolve) => own.listen(0, resolve));
+  const url = `http://localhost:${(own.address() as AddressInfo).port}`;
+
+  const ok = await fetch(`${url}/geocode?q=${encodeURIComponent("  Berkeley ")}`);
+  assert.equal(ok.status, 200);
+  assert.deepEqual(await ok.json(), { places: [{ label: "Berkeley, California", lat: 1, lng: 2 }] });
+
+  for (const bad of ["", "?q=a", `?q=${"x".repeat(101)}`]) {
+    const res = await fetch(`${url}/geocode${bad}`);
+    assert.equal(res.status, 400);
+    assert.equal(((await res.json()) as any).error.code, "INVALID_INPUT");
+  }
+  own.closeAllConnections();
+  own.close();
+});

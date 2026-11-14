@@ -20,6 +20,23 @@ X-Member-Id: m_7f3a
 
 The join code is a **4-digit number sent as text** (for example `"0427"`, so keep any leading zero).
 
+### Find a place by name
+
+`GET /geocode?q=Berkeley`
+
+For a screen where someone types where to eat. Turns the text into coordinates to send in "Start a group". Up to 5 matches, best first. An empty list means nothing matched. `q` needs 2 to 100 characters.
+
+```json
+{
+  "places": [
+    { "label": "Berkeley, California", "lat": 37.8708, "lng": -122.2729 },
+    { "label": "Berkeley County, West Virginia", "lat": 39.4535, "lng": -78.0396 }
+  ]
+}
+```
+
+The app can also skip this and send the phone's own location (`navigator.geolocation` in the browser). Show `label` so people can pick the right match. Typing is slow to look up (about a second), so search when they submit, not on every key press. The server limits this to 30 searches a minute per address.
+
 ### Start a group
 
 `POST /groups`

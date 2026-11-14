@@ -62,6 +62,7 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 - [x] Close old groups after a while (e.g. 24 hours)
 
 **Restaurant data**
+- [x] `GET /geocode?q=`: typed place to coordinates, so the front end can send a real location
 - [x] `GET /groups/:id/restaurants`: fetch nearby places using the group's filters (fake data by default; real OpenStreetMap data with `RESTAURANT_SOURCE=osm`)
 - [x] Every member gets the same stack in the same order (fetch once per group and store it)
 - [x] Map the provider's response to our card fields so the front end never sees provider-specific data (done for OpenStreetMap)

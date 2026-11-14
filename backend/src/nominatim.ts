@@ -1,4 +1,5 @@
 import { areaKey, createAreaCache } from "./areacache.js";
+import { createGate, type Gate } from "./gate.js";
 import { ApiError } from "./groups.js";
 import { DEFAULT_RADIUS_METERS, MAX_RADIUS_METERS, toStack, type OsmElement } from "./osm.js";
 import type { Restaurant, RestaurantProvider } from "./restaurants.js";
@@ -29,6 +30,8 @@ interface NominatimItem {
 interface Options {
   fetchFn?: typeof fetch;
   baseUrl?: string;
+  // Share one gate with anything else that talks to Nominatim; made here if not given
+  gate?: Gate;
   minGapMs?: number;
   maxWaiting?: number;
   timeoutMs?: number;
@@ -42,29 +45,11 @@ const unavailable = () =>
 export function createNominatimProvider(options: Options = {}): RestaurantProvider {
   const fetchFn = options.fetchFn ?? fetch;
   const baseUrl = options.baseUrl ?? process.env.NOMINATIM_URL ?? DEFAULT_URL;
-  const minGapMs = options.minGapMs ?? 1100;
-  const maxWaiting = options.maxWaiting ?? 20;
   const timeoutMs = options.timeoutMs ?? 8000;
-  const now = options.now ?? Date.now;
-  const sleep = options.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const gate =
+    options.gate ??
+    createGate({ minGapMs: options.minGapMs, maxWaiting: options.maxWaiting, now: options.now, sleep: options.sleep });
   const cached = createAreaCache<OsmElement[]>({ now: options.now });
-
-  // One request a second, in the order they arrived
-  let line: Promise<void> = Promise.resolve();
-  let lastAt = 0;
-  let waiting = 0;
-  function waitForTurn(): Promise<void> {
-    if (waiting >= maxWaiting) throw unavailable();
-    waiting++;
-    const turn = line.then(async () => {
-      const wait = lastAt + minGapMs - now();
-      if (wait > 0) await sleep(wait);
-      lastAt = now();
-      waiting--;
-    });
-    line = turn;
-    return turn;
-  }
 
   async function searchKind(kind: string, lat: number, lng: number, radius: number): Promise<NominatimItem[]> {
     const dLat = radius / METERS_PER_DEGREE;
@@ -79,7 +64,7 @@ export function createNominatimProvider(options: Options = {}): RestaurantProvid
       limit: "40",
       "accept-language": "en",
     });
-    await waitForTurn();
+    await gate.waitForTurn();
     const res = await fetchFn(`${baseUrl}?${params}`, {
       headers: { Accept: "application/json", "User-Agent": "crave-backend/0.1 (group restaurant picker)" },
       signal: AbortSignal.timeout(timeoutMs),
