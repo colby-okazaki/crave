@@ -50,3 +50,15 @@ export function isExhausted(group: Group, stackSize: number): boolean {
   }
   return swipedAll >= stackSize;
 }
+
+// After someone leaves, the people still here may already agree: the leaver might have been the
+// only one who hadn't liked a place. Returns the first place in the stack everyone left liked.
+export function matchAfterLeave(group: Group, stack: Restaurant[]): Restaurant | null {
+  if (group.match || group.members.length < MIN_MEMBERS_FOR_MATCH) return null;
+  const found = stack.find((r) => {
+    const votes = group.swipes.get(r.id);
+    return votes !== undefined && group.members.every((m) => votes.get(m.id) === true);
+  });
+  if (found) group.match = found;
+  return found ?? null;
+}
