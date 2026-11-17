@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError } from "./groups.js";
-import { createOsmProvider } from "./osm.js";
+import { createOsmProvider, matchesCuisine, MAX_RADIUS_METERS } from "./osm.js";
 
 const HERE = { lat: 37.8716, lng: -122.2727 };
 
@@ -87,4 +87,20 @@ test("when every server fails it says so, and the failure isn't remembered", asy
   const p = createOsmProvider({ fetchFn: f.fn, endpoints: ["http://a", "http://b"] });
   await assert.rejects(p.search(HERE, { radiusMeters: 3000 }), (e: unknown) => e instanceof ApiError && e.code === "RESTAURANTS_UNAVAILABLE" && e.status === 503);
   assert.equal((await p.search(HERE, { radiusMeters: 3000 })).length, 2);
+});
+
+test("the front end's cuisine ids find the places OpenStreetMap tags with different words", () => {
+  const place = (cuisine: string) => ({ cuisine }) as any;
+  assert.ok(matchesCuisine(place("middle_eastern"), { cuisine: ["middle_eastern"] }));
+  assert.ok(matchesCuisine(place("lebanese;mediterranean"), { cuisine: ["middle_eastern"] }));
+  assert.ok(matchesCuisine(place("burger"), { cuisine: ["burgers"] }));
+  assert.ok(matchesCuisine(place("bubble_tea"), { cuisine: ["boba"] }));
+  assert.ok(matchesCuisine(place("sandwich"), { cuisine: ["sandwiches"] }));
+  assert.ok(matchesCuisine(place("mexican"), { cuisine: ["mexican", "thai"] }));
+  assert.ok(!matchesCuisine(place("thai"), { cuisine: ["burgers"] }));
+  assert.ok(!matchesCuisine({} as any, { cuisine: ["thai"] }));
+});
+
+test("the radius cap is 20 miles, the farthest the front end offers", () => {
+  assert.equal(MAX_RADIUS_METERS, 32187);
 });

@@ -18,8 +18,10 @@ X-Member-Id: m_7f3a
 | Change filters (host, in the lobby) | `PATCH /groups/:id/filters` | OK and the saved filters |
 | Start the round (host) | `POST /groups/:id/start` | OK |
 | Leave the group | `POST /groups/:id/leave` | OK |
+| End the round early (host) | `POST /groups/:id/end` | OK, and the match or `noMatch` |
+| Closest picks | `GET /groups/:id/results` | The places most people liked |
 | Send a swipe | `POST /groups/:id/swipes` | OK, or a match if this swipe made one |
-| Live updates | Socket.io connection | `state`, `member_joined`, `member_left`, `filters_changed`, `round_started`, `match_found`, `no_match` events |
+| Live updates | Socket.io connection | `state`, `member_joined`, `member_left`, `progress`, `filters_changed`, `round_started`, `match_found`, `no_match` events |
 
 The join code is a **4-digit number sent as text** (for example `"0427"`, so keep any leading zero).
 
@@ -151,6 +153,26 @@ Response `200`: `{ "ok": true }`.
 - Leaving can finish the round for the others: if everyone left had already liked a place you hadn't, they get `match_found`; if they've swiped everything, `no_match`.
 - If you were the last person, the group closes.
 
+### End the round early (host only)
+
+`POST /groups/g_9c21/end` with the host's `X-Member-Id`, no body.
+
+Response `200`: `{ "ok": true, "match": null, "noMatch": true }`, or `"match": { "restaurantId": "r_001" }` and `"noMatch": false` if the group had already matched.
+
+Every phone gets `no_match` (sent once, however many times the host ends it), or `match_found` again if there was a match. Only the host: anyone else gets `403 NOT_HOST`.
+
+### Closest picks
+
+`GET /groups/g_9c21/results` with your `X-Member-Id`
+
+Response `200`:
+
+```json
+{ "results": [{ "restaurantId": "r_001", "likes": 2 }, { "restaurantId": "r_004", "likes": 1 }] }
+```
+
+Up to 3 places someone liked, most likes first; ties keep the card order (nearest first). Only people still in the group count. Empty list if nobody liked anything. Use it for the "no match" screen.
+
 ### Send a swipe
 
 `POST /groups/g_9c21/swipes`
@@ -203,9 +225,10 @@ If the IDs don't belong to an open group, the connection is refused and `connect
 
 | Event | When | Payload |
 | --- | --- | --- |
-| `state` | Right after connecting, and again after every reconnect, so a phone that dropped catches up | `{ "members": [ … ], "hostId": "m_7f3a", "filters": { … }, "started": false, "match": null, "noMatch": false }`, or `"match": { "restaurant": { … } }` (same restaurant as `match_found`) once the group has matched |
+| `state` | Right after connecting, and again after every reconnect, so a phone that dropped catches up | `{ "members": [ … ], "hostId": "m_7f3a", "filters": { … }, "started": false, "progress": [ … ], "match": null, "noMatch": false }`, or `"match": { "restaurant": { … } }` (same restaurant as `match_found`) once the group has matched |
 | `filters_changed` | The host changed the filters in the lobby | `{ "filters": { "radiusMeters": 4828, "price": [1, 2], "cuisine": ["mexican"] } }` |
 | `round_started` | The host started the round: go to swiping | `{}` |
+| `progress` | A member swiped a card | `{ "memberId": "m_b812", "swiped": 14, "total": 20 }` (`total` is the stack size; 0 until the cards were fetched) |
 | `member_left` | Someone left the group | `{ "memberId": "m_b812", "hostId": "m_7f3a" }` (`hostId` is the host now, in case it changed) |
 | `member_joined` | Someone joins the group | `{ "member": { "id": "m_b812", "nickname": "Davin" } }` |
 | `no_match` | Every member has swiped every place and nobody matched. Sent once; a person joining afterwards reopens the stack (`noMatch` goes back to false) | `{}` |

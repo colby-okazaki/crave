@@ -12,7 +12,7 @@ A group of friends can't agree on where to eat. Everyone swipes yes or no on nea
 | Front end | **React 19**, **Vite**, React Router, CSS modules (a mobile-first web app) |
 | Back end | **Node.js 24**, **Express 5**, **Socket.io** for live updates |
 | Data | In-memory groups for now (database planned); real restaurants and place search from free **OpenStreetMap** services (Nominatim, with Overpass as backup), or fake data for offline work |
-| Testing | Node's built-in test runner (45 tests, `npm test`), plus a load test (`npm run loadtest`) |
+| Testing | Node's built-in test runner (51 tests, `npm test`), plus a load test (`npm run loadtest`) |
 | Tooling | Docker image for the server, rate limiting, GitHub pull requests |
 
 Back end numbers, measured by a script in this repo: 1,200 phones connected at once with 0 failures. See [`STATS.md`](STATS.md).
@@ -42,6 +42,7 @@ Updated as each pull request merges. Last updated: 2026-11-14.
 | Back end: real restaurant data from OpenStreetMap (free, no key), switched on with `RESTAURANT_SOURCE=osm` | Done, tried live: 20 places in about 1.4 s. No prices or ratings, and photos and hours only for some places, so the front end must handle empty fields |
 | Back end: place search, so a typed location becomes coordinates (`GET /geocode`) | Done, tried live |
 | Back end: load tested | 1,200 phones connected at once, 0 failures ([`STATS.md`](STATS.md)) |
+| Back end: progress per person, end round early, closest picks; search radius up to 20 miles; the front end's cuisine names (burgers, boba, middle eastern…) now match OpenStreetMap's words | Done, tested |
 | Back end: host-only filters and start, `hostId` in `state`, and leaving a group (the leaver's votes go, the host role passes on, the rest can still match) | Done, tested |
 | Front end: all 9 screens (Home, Create, Join, Lobby, Swipe, Details, Waiting, Match, No match), connected to the real server, with a fake-data mode (`npm run dev:mock`) | Done, not yet tried on a real phone |
 | Both: API contract in [`docs/API.md`](docs/API.md), and the front end and back end agree on the 4-digit code format | Done |
@@ -51,7 +52,7 @@ Updated as each pull request merges. Last updated: 2026-11-14.
 | Area | Owner |
 | --- | --- |
 | Front end: call the new leave endpoint, try it on a real phone, fix the brand red and name | Davin |
-| Back end: progress per person, nudge, end round, closest picks, quick vote, new round in the same group | Colby |
+| Back end: nudge, quick vote, new round in the same group | Colby |
 | Back end: host the server online, add a database | Colby |
 | Both: test with a real group at dinner | Both |
 

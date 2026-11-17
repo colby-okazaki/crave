@@ -62,3 +62,18 @@ export function matchAfterLeave(group: Group, stack: Restaurant[]): Restaurant |
   if (found) group.match = found;
   return found ?? null;
 }
+
+// The places people liked most, for the "no match" screen: most likes first, ties keep the
+// stack's order (nearest first). Only places someone liked, at most 3. Only current members count.
+export function closestPicks(group: Group, stack: Restaurant[], limit = 3): { restaurantId: string; likes: number }[] {
+  const ids = new Set(group.members.map((m) => m.id));
+  return stack
+    .map((r) => {
+      let likes = 0;
+      for (const [memberId, liked] of group.swipes.get(r.id) ?? []) if (liked && ids.has(memberId)) likes++;
+      return { restaurantId: r.id, likes };
+    })
+    .filter((p) => p.likes > 0)
+    .sort((a, b) => b.likes - a.likes)
+    .slice(0, limit);
+}

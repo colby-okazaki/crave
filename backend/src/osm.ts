@@ -15,7 +15,8 @@ const DEFAULT_ENDPOINTS = [
   "https://overpass.private.coffee/api/interpreter",
 ];
 export const DEFAULT_RADIUS_METERS = 3000;
-export const MAX_RADIUS_METERS = 10000;
+// 20 miles: the farthest the front end offers
+export const MAX_RADIUS_METERS = 32187;
 const MAX_RESULTS = 20;
 
 export interface OsmElement {
@@ -139,9 +140,34 @@ function cuisineLabel(value?: string): string | undefined {
   return first ? first[0].toUpperCase() + first.slice(1) : undefined;
 }
 
+// The front end's cuisine ids -> the words OpenStreetMap uses for them (underscores read as spaces).
+// An id not listed here is matched as itself.
+const CUISINE_WORDS: Record<string, string[]> = {
+  bbq: ["bbq", "barbecue", "barbeque"],
+  boba: ["bubble tea", "boba"],
+  breakfast: ["breakfast", "brunch"],
+  burgers: ["burger", "burgers", "hamburger"],
+  cafe: ["cafe", "coffee shop", "coffee"],
+  dessert: ["dessert", "ice cream", "cake", "donut", "pastry", "frozen yogurt"],
+  middle_eastern: ["middle eastern", "lebanese", "arab", "persian", "falafel", "kebab"],
+  ramen: ["ramen", "noodle", "noodles"],
+  salad: ["salad"],
+  sandwiches: ["sandwich", "sandwiches", "deli", "sub"],
+  seafood: ["seafood", "fish", "oyster"],
+  steakhouse: ["steak house", "steak", "steakhouse"],
+  vegan: ["vegan"],
+  vegetarian: ["vegetarian"],
+  halal: ["halal"],
+};
+
+function wordsFor(id: string): string[] {
+  const key = id.toLowerCase();
+  return CUISINE_WORDS[key] ?? [key.replace(/_/g, " ")];
+}
+
 export function matchesCuisine(r: Restaurant, filters: Filters): boolean {
   if (!filters.cuisine?.length) return true;
-  const wanted = filters.cuisine.map((c) => c.toLowerCase());
+  const wanted = filters.cuisine.flatMap(wordsFor);
   const has = osmCuisines(r.cuisine);
   return has.some((c) => wanted.includes(c));
 }

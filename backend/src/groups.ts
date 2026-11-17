@@ -30,6 +30,8 @@ export interface Group {
   match?: Restaurant;
   // True while every member has swiped on every place and nobody matched
   exhausted?: boolean;
+  // How many places are in the stack, once it has been fetched (for progress)
+  stackSize?: number;
   createdAt: number;
 }
 
@@ -152,4 +154,14 @@ export function leaveGroup(group: Group, memberId: string): { hostId: string | n
   }
   if (group.hostId === memberId) group.hostId = group.members[0].id;
   return { hostId: group.hostId, closed: false };
+}
+
+// How far along each member is: places swiped out of the stack. total is 0 until the cards are fetched.
+export function progressOf(group: Group): { memberId: string; swiped: number; total: number }[] {
+  const total = group.stackSize ?? 0;
+  return group.members.map((m) => {
+    let swiped = 0;
+    for (const votes of group.swipes.values()) if (votes.has(m.id)) swiped++;
+    return { memberId: m.id, swiped, total };
+  });
 }

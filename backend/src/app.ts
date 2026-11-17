@@ -1,13 +1,13 @@
 import cors from "cors";
 import express, { type ErrorRequestHandler } from "express";
 import { corsOrigin } from "./cors.js";
-import { ApiError, createGroup, findGroupForMember, isHost, joinGroup, leaveGroup, type Filters, type Group } from "./groups.js";
+import { ApiError, createGroup, findGroupForMember, isHost, joinGroup, leaveGroup, progressOf, type Filters, type Group } from "./groups.js";
 import { emitToGroup } from "./live.js";
 import { placeFinder, restaurantProvider } from "./providers.js";
 import type { PlaceFinder } from "./places.js";
 import type { Restaurant, RestaurantProvider } from "./restaurants.js";
 import { createLimiters } from "./ratelimit.js";
-import { isExhausted, matchAfterLeave, matchPayload, recordSwipe } from "./swipes.js";
+import { closestPicks, isExhausted, matchAfterLeave, matchPayload, recordSwipe } from "./swipes.js";
 
 function invalid(message: string): never {
   throw new ApiError(400, "INVALID_INPUT", message);
@@ -147,6 +147,28 @@ export function buildApp(provider: RestaurantProvider = restaurantProvider, find
     res.json({ ok: true });
   });
 
+  // Host ends the round early: the group gets its match if it has one, otherwise no_match.
+  app.post("/groups/:id/end", (req, res) => {
+    const group = hostGroup(req.params.id, req.header("X-Member-Id") ?? "");
+    if (group.match) {
+      emitToGroup(group.id, "match_found", { restaurant: matchPayload(group.match) });
+    } else if (!group.exhausted) {
+      group.exhausted = true;
+      emitToGroup(group.id, "no_match", {});
+    }
+    res.json({ ok: true, match: group.match ? { restaurantId: group.match.id } : null, noMatch: !group.match });
+  });
+
+  // For the "no match" screen: the places the most people liked
+  app.get("/groups/:id/results", async (req, res) => {
+    const group = findGroupForMember(req.params.id, req.header("X-Member-Id") ?? "");
+    if (!group) {
+      throw new ApiError(404, "GROUP_NOT_FOUND", "That code doesn't match an open group.");
+    }
+    const stack = group.restaurants ? await group.restaurants : [];
+    res.json({ results: closestPicks(group, stack) });
+  });
+
   app.get("/groups/:id/restaurants", async (req, res) => {
     const group = findGroupForMember(req.params.id, req.header("X-Member-Id") ?? "");
     if (!group) {
@@ -161,7 +183,9 @@ export function buildApp(provider: RestaurantProvider = restaurantProvider, find
         if (group.restaurants === search) group.restaurants = undefined;
       });
     }
-    res.json({ restaurants: await group.restaurants });
+    const restaurants = await group.restaurants;
+    group.stackSize = restaurants.length;
+    res.json({ restaurants });
   });
 
   app.post("/groups/:id/swipes", async (req, res) => {
@@ -186,6 +210,7 @@ export function buildApp(provider: RestaurantProvider = restaurantProvider, find
     const exhausted = isExhausted(group, stack.length);
     if (exhausted && !group.exhausted) emitToGroup(group.id, "no_match", {});
     group.exhausted = exhausted;
+    emitToGroup(group.id, "progress", progressOf(group).find((p) => p.memberId === memberId));
 
     res.json({ ok: true, match: match ? { restaurantId: match.id } : null, noMatch: exhausted });
   });
