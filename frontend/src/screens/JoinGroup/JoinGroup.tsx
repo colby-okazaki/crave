@@ -4,7 +4,7 @@ import { Button } from "../../components/Button/Button";
 import { CodeInput } from "../../components/CodeInput/CodeInput";
 import { Screen, Spacer } from "../../components/Screen/Screen";
 import { TextField } from "../../components/TextField/TextField";
-import type { JoinResult } from "../../api/groups";
+import type { JoinResult } from "../../api/types";
 import styles from "./JoinGroup.module.css";
 
 /** Join codes are 4 digits, kept as text so a leading zero survives (e.g. "0427"). Matches the backend. */
@@ -15,7 +15,12 @@ const ERROR_MESSAGES: Record<Extract<JoinResult, { ok: false }>["error"], string
   GROUP_NOT_FOUND: "Code not found",
   GROUP_CLOSED: "This group has ended",
   NICKNAME_TAKEN: "Someone in this group already has that name",
+  RATE_LIMITED: "Too many tries. Wait a minute and try again",
+  NETWORK: "Can't reach the server. Check your connection",
+  SERVER_ERROR: "Something went wrong. Try again",
 };
+
+const isCodeProblem = (error: string) => error === "GROUP_NOT_FOUND" || error === "GROUP_CLOSED";
 
 type JoinGroupProps = {
   initialName?: string;
@@ -39,7 +44,8 @@ export function JoinGroup({ initialName = "", initialCode = "", onBack, onJoin, 
   const codeComplete = code.length === CODE_LENGTH;
   const trimmedName = name.trim();
   const canJoin = codeComplete && trimmedName.length > 0 && !submitting;
-  const codeError = error && !error.ok && error.error !== "NICKNAME_TAKEN";
+  // Only a bad code marks the boxes red (not a network or name problem).
+  const codeError = error && !error.ok && isCodeProblem(error.error);
 
   let hint = "";
   if (!codeComplete) hint = `Fill in all ${CODE_LENGTH} digits to join`;
@@ -56,7 +62,7 @@ export function JoinGroup({ initialName = "", initialCode = "", onBack, onJoin, 
         onJoined(result, trimmedName, code);
       } else {
         setError(result);
-        if (result.error !== "NICKNAME_TAKEN") setShakeCount((n) => n + 1);
+        if (isCodeProblem(result.error)) setShakeCount((n) => n + 1);
         navigator.vibrate?.(60);
       }
     } finally {

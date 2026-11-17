@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "../../components/Button/Button";
 import { Screen, Spacer } from "../../components/Screen/Screen";
-import type { ClosePick, Restaurant, VoteResult } from "../../api/restaurants";
+import type { ClosePick, Restaurant, VoteResult } from "../../api/types";
 import { milesAway, priceLabel } from "../../utils/format";
 import styles from "./NoMatch.module.css";
 
@@ -11,28 +11,41 @@ export type ClosePicksLoad =
   | { status: "ready"; picks: ClosePick[] };
 
 type NoMatchProps = {
-  load: ClosePicksLoad;
+  /** Leave out when the server can't tell us the closest picks (the list is hidden). */
+  load?: ClosePicksLoad;
   /** People in the group (for "2 of 3 liked" and "Votes in: 1 of 3"). */
   memberCount: number;
   onRetry: () => void;
-  /** Send my vote; `onVotesIn` reports how many people have voted so far. */
-  onVote: (restaurantId: string, onVotesIn: (count: number) => void) => Promise<VoteResult>;
+  /** Send my vote; `onVotesIn` reports how many people have voted so far. Leave out to hide Quick vote. */
+  onVote?: (restaurantId: string, onVotesIn: (count: number) => void) => Promise<VoteResult>;
   onVoteResult: (winner: Restaurant, result: VoteResult) => void;
   onChangeFilters: () => void;
+  /** "Change filters & try again", or "Start a new group" when the server can't replay a round. */
+  changeFiltersLabel?: string;
   onHome: () => void;
 };
 
 type Mode = { kind: "list" } | { kind: "picking"; pick: string | null } | { kind: "voted"; pick: string; votesIn: number };
 
-export function NoMatch({ load, memberCount, onRetry, onVote, onVoteResult, onChangeFilters, onHome }: NoMatchProps) {
+export function NoMatch({
+  load,
+  memberCount,
+  onRetry,
+  onVote,
+  onVoteResult,
+  onChangeFilters,
+  changeFiltersLabel = "Change filters & try again",
+  onHome,
+}: NoMatchProps) {
   const [mode, setMode] = useState<Mode>({ kind: "list" });
   const [voteFailed, setVoteFailed] = useState(false);
-  const picks = load.status === "ready" ? load.picks : [];
-  const canVote = picks.length >= 2;
+  const picks = load?.status === "ready" ? load.picks : [];
+  const canVote = Boolean(onVote) && picks.length >= 2;
 
   async function submitVote(pick: string) {
     setVoteFailed(false);
     setMode({ kind: "voted", pick, votesIn: 1 });
+    if (!onVote) return;
     try {
       const result = await onVote(pick, (votesIn) => setMode({ kind: "voted", pick, votesIn }));
       const winner = picks.find((p) => p.restaurant.id === result.winnerId)?.restaurant;
@@ -46,7 +59,8 @@ export function NoMatch({ load, memberCount, onRetry, onVote, onVoteResult, onCh
   let subtitle = "Nobody agreed on every spot. Here's what came closest:";
   if (mode.kind === "picking") subtitle = "Tap the place you'd pick. Most votes wins.";
   if (mode.kind === "voted") subtitle = `Votes in: ${mode.votesIn} of ${memberCount}. Waiting for the rest…`;
-  if (load.status === "ready" && picks.length === 0) subtitle = "Nobody liked any of these places. Try different filters?";
+  if (!load) subtitle = "Nobody agreed on every spot this time.";
+  if (load?.status === "ready" && picks.length === 0) subtitle = "Nobody liked any of these places. Try different filters?";
 
   return (
     <Screen>
@@ -56,9 +70,9 @@ export function NoMatch({ load, memberCount, onRetry, onVote, onVoteResult, onCh
         {subtitle}
       </p>
 
-      {load.status === "loading" && <p className={styles.status}>Finding the closest picks…</p>}
+      {load?.status === "loading" && <p className={styles.status}>Finding the closest picks…</p>}
 
-      {load.status === "error" && (
+      {load?.status === "error" && (
         <div className={styles.status} role="alert">
           <p>Couldn't load the closest picks.</p>
           <Button variant="secondary" onClick={onRetry}>
@@ -127,7 +141,7 @@ export function NoMatch({ load, memberCount, onRetry, onVote, onVoteResult, onCh
         <>
           {canVote && <Button onClick={() => setMode({ kind: "picking", pick: null })}>Quick vote on top {picks.length}</Button>}
           <Button variant="secondary" onClick={onChangeFilters}>
-            Change filters & try again
+            {changeFiltersLabel}
           </Button>
           <button type="button" className={styles.home} onClick={onHome}>
             Back to home

@@ -153,6 +153,13 @@
   gap: var(--space-chip-gap-tight);
 }
 
+.error {
+  color: var(--color-error);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+}
+
 /* Guests see this where the host's Start button is. */
 .waiting {
   display: flex;

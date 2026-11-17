@@ -4,7 +4,7 @@ import { ConfirmDialog } from "../../components/ConfirmDialog/ConfirmDialog";
 import { DetailsSheet } from "../../components/DetailsSheet/DetailsSheet";
 import { RestaurantCard } from "../../components/RestaurantCard/RestaurantCard";
 import { Screen } from "../../components/Screen/Screen";
-import type { Restaurant } from "../../api/restaurants";
+import type { Restaurant } from "../../api/types";
 import xIcon from "../../assets/icons/x.svg";
 import infoIcon from "../../assets/icons/info.svg";
 import heartIcon from "../../assets/icons/heart.svg";

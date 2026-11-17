@@ -6,7 +6,7 @@ import { AddChip } from "../../components/AddChip/AddChip";
 import { Chip } from "../../components/Chip/Chip";
 import { ConfirmDialog } from "../../components/ConfirmDialog/ConfirmDialog";
 import { Screen, Spacer } from "../../components/Screen/Screen";
-import type { Member } from "../../api/groups";
+import type { Member } from "../../api/types";
 import { ALL_CUISINES, DEFAULT_CUISINE_IDS, cuisineLabel } from "../../data/cuisines";
 import type { ShareOutcome } from "../../utils/shareInvite";
 import shareIcon from "../../assets/icons/share.svg";
@@ -48,6 +48,8 @@ type LobbyProps = {
   onShareInvite: () => Promise<ShareOutcome>;
   onStart: () => void;
   onLeave: () => void;
+  /** e.g. starting the round failed. */
+  error?: string;
 };
 
 export function Lobby({
@@ -60,6 +62,7 @@ export function Lobby({
   onShareInvite,
   onStart,
   onLeave,
+  error,
 }: LobbyProps) {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [shareOutcome, setShareOutcome] = useState<ShareOutcome>("shared");
@@ -223,6 +226,11 @@ export function Lobby({
 
       <Spacer />
 
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
       {isHost ? (
         <Button
           onClick={onStart}

@@ -3,23 +3,33 @@ import { Avatar } from "../../components/Avatar/Avatar";
 import { Button } from "../../components/Button/Button";
 import { ConfirmDialog } from "../../components/ConfirmDialog/ConfirmDialog";
 import { Screen, Spacer } from "../../components/Screen/Screen";
-import type { MemberProgress } from "../../api/groups";
+import type { Member } from "../../api/types";
 import checkIcon from "../../assets/icons/check.svg";
 import styles from "./Waiting.module.css";
 
 /** Figma notes: Nudge has a 1 minute cooldown. */
 export const NUDGE_COOLDOWN_MS = 60_000;
 
+/** Someone in the group; `swiped` / `total` only when the server tracks progress. */
+type WaitingMember = Member & { swiped?: number; total?: number };
+
 type WaitingProps = {
-  /** Everyone's progress, or null while we're still connecting. */
-  members: MemberProgress[] | null;
+  /** Everyone in the group, or null while we're still connecting. */
+  members: WaitingMember[] | null;
   myId: string;
   isHost: boolean;
-  /** Ping the people who are still swiping. */
-  onNudge: (memberIds: string[]) => Promise<void>;
-  /** Host only: stop the round and use the likes so far. */
-  onEndRound: () => void;
+  /** Ping the people who are still swiping. Leave out to hide the button. */
+  onNudge?: (memberIds: string[]) => Promise<void>;
+  /** Host only: stop the round and use the likes so far. Leave out to hide it. */
+  onEndRound?: () => void;
 };
+
+/** Done, still swiping, or unknown (the server doesn't track progress yet). */
+function progressOf(m: WaitingMember, myId: string): "done" | "swiping" | "unknown" {
+  if (m.id === myId) return "done"; // you only get here after your last card
+  if (m.swiped === undefined || m.total === undefined) return "unknown";
+  return m.swiped >= m.total ? "done" : "swiping";
+}
 
 export function Waiting({ members, myId, isHost, onNudge, onEndRound }: WaitingProps) {
   const [cooldownUntil, setCooldownUntil] = useState(0);
@@ -36,12 +46,14 @@ export function Waiting({ members, myId, isHost, onNudge, onEndRound }: WaitingP
     return () => clearInterval(timer);
   }, [cooldownUntil]);
 
-  const stillSwiping = (members ?? []).filter((m) => m.swiped < m.total && m.id !== myId);
+  const tracked = (members ?? []).some((m) => m.id !== myId && progressOf(m, myId) !== "unknown");
+  const stillSwiping = (members ?? []).filter((m) => progressOf(m, myId) === "swiping");
   const secondsLeft = Math.max(0, Math.ceil((cooldownUntil - now) / 1000));
   const coolingDown = secondsLeft > 0;
 
   let subtitle = "Checking on your friends…";
-  if (members) {
+  if (members && !tracked) subtitle = "Waiting for everyone to finish…";
+  else if (members) {
     subtitle =
       stillSwiping.length === 0
         ? "Everyone's done! Finding your match…"
@@ -55,6 +67,7 @@ export function Waiting({ members, myId, isHost, onNudge, onEndRound }: WaitingP
     const startedAt = Date.now();
     setCooldownUntil(startedAt + NUDGE_COOLDOWN_MS);
     setNow(startedAt);
+    if (!onNudge) return;
     try {
       await onNudge(stillSwiping.map((m) => m.id));
     } catch {
@@ -78,7 +91,7 @@ export function Waiting({ members, myId, isHost, onNudge, onEndRound }: WaitingP
       {members && (
         <ul className={styles.list} aria-label="Who's done">
           {members.map((m) => {
-            const done = m.swiped >= m.total;
+            const progress = progressOf(m, myId);
             const isMe = m.id === myId;
             return (
               <li key={m.id} className={styles.row}>
@@ -88,9 +101,11 @@ export function Waiting({ members, myId, isHost, onNudge, onEndRound }: WaitingP
                   {/* Avoid "You (you)" when the host hasn't set a name yet. */}
                   {isMe && m.nickname !== "You" && " (you)"}
                 </span>
-                <span className={[styles.pill, done ? styles.done : styles.swiping].join(" ")}>
-                  {done ? "Done" : `Swiping · ${m.swiped} of ${m.total}`}
-                </span>
+                {progress !== "unknown" && (
+                  <span className={[styles.pill, progress === "done" ? styles.done : styles.swiping].join(" ")}>
+                    {progress === "done" ? "Done" : `Swiping · ${m.swiped} of ${m.total}`}
+                  </span>
+                )}
               </li>
             );
           })}
@@ -99,12 +114,12 @@ export function Waiting({ members, myId, isHost, onNudge, onEndRound }: WaitingP
 
       <Spacer />
 
-      {stillSwiping.length > 0 && (
+      {onNudge && stillSwiping.length > 0 && (
         <Button variant="secondary" onClick={handleNudge} disabled={coolingDown}>
           {nudgeLabel}
         </Button>
       )}
-      {isHost && stillSwiping.length > 0 && (
+      {onEndRound && isHost && stillSwiping.length > 0 && (
         <button type="button" className={styles.endRound} onClick={() => setConfirmEnd(true)}>
           End round now
         </button>
@@ -116,7 +131,7 @@ export function Waiting({ members, myId, isHost, onNudge, onEndRound }: WaitingP
         confirmLabel="End round"
         onConfirm={() => {
           setConfirmEnd(false);
-          onEndRound();
+          onEndRound?.();
         }}
         onCancel={() => setConfirmEnd(false)}
       >

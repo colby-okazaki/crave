@@ -1,33 +1,5 @@
-// Mocks of GET /groups/:id/restaurants and POST /groups/:id/swipes (see docs/API.md)
-// until the frontend talks to the real backend.
-
-export type Restaurant = {
-  id: string;
-  name: string;
-  /** null when the source has no photo: show the placeholder gradient. */
-  photoUrl: string | null;
-  /** 1–4, shown as $ to $$$$. null when unknown (always, with OpenStreetMap). */
-  price: number | null;
-  /** 0–5, one decimal. null when unknown (always, with OpenStreetMap). */
-  rating: number | null;
-  distanceMeters: number;
-  address: string;
-  /** Opening hours today, e.g. "11:00–21:00". null when unknown: hide the line. */
-  hours: string | null;
-  location: { lat: number; lng: number };
-  /** Not in the API yet (Figma shows "Mexican · $$ · 0.8 mi away"). */
-  cuisine?: string;
-  /** Not in the API yet (Figma shows "4.6 · 1.2k reviews"). */
-  reviewCount?: number;
-  /** Not in the API yet: extra photos for the Details sheet (falls back to photoUrl). */
-  photos?: string[];
-  /** Not in the API yet: "Popular dishes" in the Details sheet. */
-  popularDishes?: string[];
-  /** Not in the API yet: "View menu" link (falls back to a web search). */
-  menuUrl?: string;
-};
-
-export type SwipeResult = { ok: true; match: { restaurantId: string } | null; noMatch?: boolean };
+// Fake-data mode: restaurants, swipes, closest picks and voting (npm run dev:mock).
+import type { ClosePick, Restaurant, SwipeResult, VoteResult } from "./types";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -111,9 +83,6 @@ export async function sendSwipe(_groupId: string, restaurantId: string, liked: b
   return { ok: true, match: liked && restaurantId === MOCK_MATCH_ID ? { restaurantId } : null };
 }
 
-/** A place that came close, and how many people liked it. */
-export type ClosePick = { restaurant: Restaurant; likes: number };
-
 /**
  * Mock of "closest picks" for the No match screen (not in docs/API.md yet):
  * the top 3 places by likes (ties: closest first). Places nobody liked are left out.
@@ -127,8 +96,6 @@ export async function getClosestPicks(groupId: string, memberIds: string[], myId
     .sort((a, b) => b.likes - a.likes || a.restaurant.distanceMeters - b.restaurant.distanceMeters)
     .slice(0, 3);
 }
-
-export type VoteResult = { winnerId: string; votes: Record<string, number> };
 
 /**
  * Mock of a quick vote (not in docs/API.md yet). Your vote counts first; the fake

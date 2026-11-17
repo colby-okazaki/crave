@@ -5,13 +5,16 @@ import styles from "./Home.module.css";
 
 type HomeProps = {
   /** Area we search around, e.g. "Berkeley, CA". */
-  locationLabel: string;
+  /** Area we search around, e.g. "Berkeley, California". Hidden until one is picked. */
+  locationLabel?: string;
+  /** A short message, e.g. "That group has ended." */
+  notice?: string;
   onCreateGroup: () => void;
   onJoinWithCode: () => void;
   onChangeLocation: () => void;
 };
 
-export function Home({ locationLabel, onCreateGroup, onJoinWithCode, onChangeLocation }: HomeProps) {
+export function Home({ locationLabel, notice, onCreateGroup, onJoinWithCode, onChangeLocation }: HomeProps) {
   return (
     <Screen>
       <Spacer />
@@ -27,16 +30,23 @@ export function Home({ locationLabel, onCreateGroup, onJoinWithCode, onChangeLoc
 
       <Spacer />
 
+      {notice && (
+        <p className={styles.notice} role="status">
+          {notice}
+        </p>
+      )}
       <Button onClick={onCreateGroup}>Create a group</Button>
       <Button variant="secondary" onClick={onJoinWithCode}>
         Join with a code
       </Button>
-      <p className={styles.location}>
-        Near {locationLabel} ·{" "}
-        <button type="button" className={styles.changeButton} onClick={onChangeLocation}>
-          Change
-        </button>
-      </p>
+      {locationLabel && (
+        <p className={styles.location}>
+          Near {locationLabel} ·{" "}
+          <button type="button" className={styles.changeButton} onClick={onChangeLocation}>
+            Change
+          </button>
+        </p>
+      )}
     </Screen>
   );
 }
