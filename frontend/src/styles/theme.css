@@ -14,6 +14,10 @@
   --color-primary-soft: #ffe8e3; /* selected chip, avatar, Share invite pill */
   --color-like: #29ad6b; /* Like button, LIKE stamp, "Open now" */
   --color-like-soft: #e0f5e8; /* "Done" pill, Waiting check circle */
+  /* Match screen confetti */
+  --color-confetti-yellow: #ffd94d;
+  --color-confetti-blue: #8cd9ff;
+  --color-confetti-pink: #ffb2cc;
   --color-pass: #ed4545; /* Pass button, NOPE stamp */
   --color-progress-track: #ebe5e0;
   --color-photo-from: #ffb873; /* photo placeholder gradient */
@@ -45,6 +49,7 @@
   --font-size-card-title: 24px;
   --font-size-sheet-title: 26px;
   --font-size-headline: 28px; /* "You're done swiping!" */
+  --font-size-match-title: 38px;
   --font-size-meta: 15px;
   --font-size-stamp: 34px;
   --letter-spacing-overline: 1.5px;
@@ -93,6 +98,9 @@
   --code-box-height: 80px;
   --tap-target-min: 44px;
   --avatar-size: 44px;
+  --avatar-size-small: 32px;
+  --match-photo-height: 200px;
+  --dot-size: 8px; /* page dots under 2+ matches */
   --action-size: 64px; /* Pass / Like */
   --action-size-small: 48px; /* Details */
   --progress-height: 6px;

@@ -61,18 +61,24 @@ export type MemberProgress = Member & { swiped: number; total: number };
  * with everyone's progress right away, then again as fake friends swipe.
  * You're always done (you only get here after your last card).
  */
+/** The fake group used by the mocks: you plus Mia and Jordan (and Colby as host if you joined). */
+export function mockGroup(me: Member, isHost: boolean): Member[] {
+  return [
+    ...(isHost ? [] : [{ id: "m_host", nickname: "Colby" }]),
+    me,
+    { id: "m_mia", nickname: "Mia" },
+    { id: "m_jordan", nickname: "Jordan" },
+  ];
+}
+
 export function watchProgress(
   me: Member,
   isHost: boolean,
   total: number,
   onUpdate: (members: MemberProgress[]) => void,
 ): () => void {
-  let members: MemberProgress[] = [
-    ...(isHost ? [] : [{ id: "m_host", nickname: "Colby", swiped: total, total }]),
-    { ...me, swiped: total, total },
-    { id: "m_mia", nickname: "Mia", swiped: total - 3, total },
-    { id: "m_jordan", nickname: "Jordan", swiped: Math.max(total - 8, 0), total },
-  ];
+  const start: Record<string, number> = { m_mia: total - 3, m_jordan: Math.max(total - 8, 0) };
+  let members: MemberProgress[] = mockGroup(me, isHost).map((m) => ({ ...m, swiped: start[m.id] ?? total, total }));
   const first = setTimeout(() => onUpdate(members), 300);
   // Every 1.5s, each friend who isn't done swipes one more card.
   const tick = setInterval(() => {

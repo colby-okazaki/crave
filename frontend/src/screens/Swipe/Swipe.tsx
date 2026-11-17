@@ -84,7 +84,7 @@ export function Swipe({ load, onRetry, onChangeFilters, onSwipe, onFinished, onL
 
   // Load the next few photos early so cards never show up blank.
   useEffect(() => {
-    for (const r of restaurants.slice(index + 1, index + 4)) new Image().src = r.photoUrl;
+    for (const r of restaurants.slice(index + 1, index + 4)) if (r.photoUrl) new Image().src = r.photoUrl;
   }, [restaurants, index]);
 
   // Only when it becomes true (onFinished may be a new function every render).

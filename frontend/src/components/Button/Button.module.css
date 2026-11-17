@@ -15,6 +15,10 @@
     background-color var(--duration-press) var(--ease-out);
 }
 
+.link {
+  text-decoration: none;
+}
+
 .button:active:not(:disabled) {
   transform: scale(0.97);
 }

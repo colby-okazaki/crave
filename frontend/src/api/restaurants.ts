@@ -4,15 +4,16 @@
 export type Restaurant = {
   id: string;
   name: string;
-  photoUrl: string;
-  /** 1–4, shown as $ to $$$$. */
-  price: number;
-  /** 0–5, one decimal. */
-  rating: number;
+  /** null when the source has no photo: show the placeholder gradient. */
+  photoUrl: string | null;
+  /** 1–4, shown as $ to $$$$. null when unknown (always, with OpenStreetMap). */
+  price: number | null;
+  /** 0–5, one decimal. null when unknown (always, with OpenStreetMap). */
+  rating: number | null;
   distanceMeters: number;
   address: string;
-  /** Opening hours today, e.g. "11:00–21:00". */
-  hours: string;
+  /** Opening hours today, e.g. "11:00–21:00". null when unknown: hide the line. */
+  hours: string | null;
   location: { lat: number; lng: number };
   /** Not in the API yet (Figma shows "Mexican · $$ · 0.8 mi away"). */
   cuisine?: string;
@@ -90,8 +91,11 @@ export async function getRestaurants(_groupId: string): Promise<Restaurant[]> {
   });
 }
 
-/** Mock of POST /groups/:id/swipes. Never makes a match yet (Match screen isn't built). */
-export async function sendSwipe(_groupId: string, _restaurantId: string, _liked: boolean): Promise<SwipeResult> {
+/** In the mock, everyone else already liked this place, so liking it makes a match. */
+export const MOCK_MATCH_ID = "r_014"; // Ramen Yoshi
+
+/** Mock of POST /groups/:id/swipes. Liking Ramen Yoshi (card 14) makes a match; pass it to reach Waiting. */
+export async function sendSwipe(_groupId: string, restaurantId: string, liked: boolean): Promise<SwipeResult> {
   await wait(150);
-  return { ok: true, match: null };
+  return { ok: true, match: liked && restaurantId === MOCK_MATCH_ID ? { restaurantId } : null };
 }

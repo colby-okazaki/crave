@@ -4,10 +4,12 @@ type AvatarProps = {
   name: string;
   /** Plays the pop-in animation (use for people who join while you're watching). */
   popIn?: boolean;
+  /** "small" = 32px (Match screen "who liked"). */
+  size?: "default" | "small";
 };
 
 /** Group member bubble with their first initial (Figma "Avatar"). */
-export function Avatar({ name, popIn = false }: AvatarProps) {
+export function Avatar({ name, popIn = false, size = "default" }: AvatarProps) {
   // Array.from keeps emoji and accented letters in one piece.
   const initial = Array.from(name.trim())[0]?.toUpperCase() ?? "?";
   return (
@@ -15,7 +17,7 @@ export function Avatar({ name, popIn = false }: AvatarProps) {
       role="img"
       aria-label={name}
       title={name}
-      className={[styles.avatar, popIn && styles.popIn].filter(Boolean).join(" ")}
+      className={[styles.avatar, size === "small" && styles.small, popIn && styles.popIn].filter(Boolean).join(" ")}
     >
       <span aria-hidden="true">{initial}</span>
     </span>

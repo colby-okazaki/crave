@@ -116,7 +116,7 @@ export function DetailsSheet({ restaurant: r, onClosed }: DetailsSheetProps) {
     place(0, true);
   }
 
-  const photos = (r.photos?.length ? r.photos : [r.photoUrl]).slice(0, 3);
+  const photos = (r.photos?.length ? r.photos : [r.photoUrl]).filter((p): p is string => Boolean(p)).slice(0, 3);
 
   return (
     <dialog
@@ -143,9 +143,7 @@ export function DetailsSheet({ restaurant: r, onClosed }: DetailsSheetProps) {
             <span className={styles.handleBar} />
           </button>
           <div className={styles.photos}>
-            {photos.map((src) => (
-              <Photo key={src} src={src} />
-            ))}
+            {photos.length > 0 ? photos.map((src) => <Photo key={src} src={src} />) : <Photo src={null} />}
           </div>
         </div>
 
@@ -165,10 +163,12 @@ export function DetailsSheet({ restaurant: r, onClosed }: DetailsSheetProps) {
               <span className="sr-only"> (opens in Maps)</span>
             </span>
           </a>
-          <p className={styles.infoRow}>
-            <img src={clockIcon} width={20} height={20} alt="" />
-            <span>{hoursToday(r.hours)}</span>
-          </p>
+          {r.hours && (
+            <p className={styles.infoRow}>
+              <img src={clockIcon} width={20} height={20} alt="" />
+              <span>{hoursToday(r.hours)}</span>
+            </p>
+          )}
 
           {r.popularDishes && r.popularDishes.length > 0 && (
             <>
@@ -202,11 +202,11 @@ export function DetailsSheet({ restaurant: r, onClosed }: DetailsSheetProps) {
 }
 
 /** Photo thumbnail; the gradient shows while it loads or if it fails. */
-function Photo({ src }: { src: string }) {
+function Photo({ src }: { src: string | null }) {
   const [failed, setFailed] = useState(false);
   return (
     <div className={styles.photo}>
-      {!failed && <img src={src} alt="" draggable={false} onError={() => setFailed(true)} />}
+      {src && !failed && <img src={src} alt="" draggable={false} onError={() => setFailed(true)} />}
     </div>
   );
 }

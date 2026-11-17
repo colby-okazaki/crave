@@ -1,7 +1,8 @@
 const METERS_PER_MILE = 1609.344;
 
-/** 2 → "$$" */
-export function priceLabel(price: number) {
+/** 2 → "$$" (empty when unknown) */
+export function priceLabel(price: number | null | undefined) {
+  if (price == null) return "";
   return "$".repeat(Math.min(Math.max(Math.round(price), 1), 4));
 }
 
@@ -23,7 +24,8 @@ export function compactCount(n: number) {
  * Handles places that close after midnight ("18:00–02:00").
  * Returns null if the hours can't be read.
  */
-export function isOpenNow(hours: string, now = new Date()): boolean | null {
+export function isOpenNow(hours: string | null | undefined, now = new Date()): boolean | null {
+  if (!hours) return null;
   const match = hours.match(/^(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})$/);
   if (!match) return null;
   const [open, close] = [
@@ -63,4 +65,13 @@ export function mapsUrl(place: { name: string; address: string; location: { lat:
 /** The restaurant's menu, or a web search for it if we don't have a link. */
 export function menuUrl(place: { name: string; address: string; menuUrl?: string }) {
   return place.menuUrl ?? `https://www.google.com/search?q=${encodeURIComponent(`${place.name} ${place.address} menu`)}`;
+}
+
+/** "Open until 10 PM" / "Closed now" (null when the hours are unknown). */
+export function openUntil(hours: string | null | undefined, now = new Date()) {
+  const open = isOpenNow(hours, now);
+  if (open === null || !hours) return null;
+  if (!open) return "Closed now";
+  const close = hours.match(/[–-]\s*(\d{1,2}:\d{2})$/)?.[1];
+  return close ? `Open until ${clockLabel(close)}` : "Open now";
 }

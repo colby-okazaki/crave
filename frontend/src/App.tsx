@@ -4,6 +4,7 @@ import {
   createGroup,
   endRound,
   joinGroup,
+  mockGroup,
   nudgeMembers,
   watchMembers,
   watchProgress,
@@ -15,6 +16,7 @@ import { JoinGroup } from "./screens/JoinGroup/JoinGroup";
 import { DEFAULT_FILTERS, Lobby, type LobbyFilters } from "./screens/Lobby/Lobby";
 import { Swipe, type SwipeLoadState } from "./screens/Swipe/Swipe";
 import { Waiting } from "./screens/Waiting/Waiting";
+import { Match, type MatchedPlace } from "./screens/Match/Match";
 import { getRestaurants, sendSwipe } from "./api/restaurants";
 import { shareInvite } from "./utils/shareInvite";
 
@@ -47,6 +49,8 @@ type GroupSession = {
   isHost: boolean;
   /** How many cards this round has (set when swiping starts). */
   total?: number;
+  /** The matched place(s), for /match. */
+  places?: MatchedPlace[];
 };
 
 /** Go back if we came from inside the app, otherwise go to Home (e.g. someone opened /join directly). */
@@ -176,8 +180,11 @@ function SwipeRoute() {
         // Sent in the background so the next card shows right away.
         sendSwipe(session.groupId, restaurant.id, liked)
           .then((result) => {
-            // TODO: open the Match screen.
-            if (result.match) console.info("Match!", result.match);
+            if (!result.match) return;
+            // Use the full card (photo, price…) when we have it; match_found only sends the basics.
+            const restaurants = load.status === "ready" ? load.restaurants : [];
+            const place = restaurants.find((r) => r.id === result.match?.restaurantId) ?? restaurant;
+            navigate("/match", { state: { ...session, places: [place] }, replace: true });
           })
           .catch((error) => console.warn("Swipe not sent", error));
       }}
@@ -221,6 +228,26 @@ function WaitingRoute() {
   );
 }
 
+function MatchRoute() {
+  const navigate = useNavigate();
+  const session = useLocation().state as GroupSession | null;
+  if (!session?.places?.length) return <Navigate to="/" replace />;
+
+  // TODO: use the real member list from the socket `state` event.
+  const members = mockGroup({ id: session.memberId, nickname: session.nickname }, session.isHost);
+  // Back to the Lobby with the same group, minus this round's details.
+  const { places, total: _total, ...group } = session;
+
+  return (
+    <Match
+      places={places}
+      members={members}
+      // TODO: tell the backend a new round started (there's no endpoint for this yet).
+      onNewRound={() => navigate("/lobby", { state: group, replace: true })}
+    />
+  );
+}
+
 export function App() {
   return (
     <BrowserRouter>
@@ -230,6 +257,7 @@ export function App() {
         <Route path="/lobby" element={<LobbyRoute />} />
         <Route path="/swipe" element={<SwipeRoute />} />
         <Route path="/waiting" element={<WaitingRoute />} />
+        <Route path="/match" element={<MatchRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
