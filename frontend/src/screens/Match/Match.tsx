@@ -3,8 +3,7 @@ import { Avatar } from "../../components/Avatar/Avatar";
 import { ButtonLink } from "../../components/Button/Button";
 import { Confetti } from "../../components/Confetti/Confetti";
 import { Screen, Spacer } from "../../components/Screen/Screen";
-import type { Member } from "../../api/groups";
-import type { Restaurant } from "../../api/restaurants";
+import type { Member, Restaurant } from "../../api/types";
 import { mapsUrl, menuUrl, milesAway, openUntil, priceLabel } from "../../utils/format";
 import heartIcon from "../../assets/icons/heart-small.svg";
 import styles from "./Match.module.css";
@@ -24,9 +23,11 @@ type MatchProps = {
   /** Set when the place won a quick vote (No match screen) instead of everyone liking it. */
   vote?: { count: number; total: number };
   onNewRound: () => void;
+  /** "Start a new round" (same group) or "Start a new group" when the server can't replay a round. */
+  newRoundLabel?: string;
 };
 
-export function Match({ places, members, vote, onNewRound }: MatchProps) {
+export function Match({ places, members, vote, onNewRound, newRoundLabel = "Start a new round" }: MatchProps) {
   const [active, setActive] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
   const place = places[Math.min(active, places.length - 1)];
@@ -101,7 +102,7 @@ export function Match({ places, members, vote, onNewRound }: MatchProps) {
           View menu
         </ButtonLink>
         <button type="button" className={styles.newRound} onClick={onNewRound}>
-          Start a new round
+          {newRoundLabel}
         </button>
       </Screen>
     </div>

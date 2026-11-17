@@ -18,6 +18,10 @@ export interface Group {
   location: { lat: number; lng: number };
   filters: Filters;
   members: Member[];
+  // The person who created the group; only they can change filters or start the round
+  hostId: string;
+  // True once the host has started the round (filters are locked from then on)
+  started?: boolean;
   // Searched once per group so everyone swipes the same cards in the same order
   restaurants?: Promise<Restaurant[]>;
   // restaurantId -> (memberId -> liked). A member's first swipe on a place counts.
@@ -53,6 +57,10 @@ export function findGroupForMember(groupId: string, memberId: string): Group | u
   const group = groupsById.get(groupId);
   if (!group || isExpired(group)) return undefined;
   return group.members.some((m) => m.id === memberId) ? group : undefined;
+}
+
+export function isHost(group: Group, memberId: string): boolean {
+  return group.hostId === memberId;
 }
 
 function newId(prefix: string): string {
@@ -101,6 +109,7 @@ export function createGroup(input: {
     location: input.location,
     filters: input.filters,
     members: [host],
+    hostId: host.id,
     swipes: new Map(),
     createdAt: Date.now(),
   };

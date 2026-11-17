@@ -1,12 +1,5 @@
-// Mocks of the group endpoints and live updates (see docs/API.md) until the frontend talks to the real backend.
-
-export type Member = { id: string; nickname: string };
-
-export type JoinResult =
-  | { ok: true; groupId: string; memberId: string }
-  | { ok: false; error: "GROUP_NOT_FOUND" | "GROUP_CLOSED" | "NICKNAME_TAKEN" };
-
-export type CreateResult = { groupId: string; joinCode: string; memberId: string };
+// Fake-data mode: groups and live updates (npm run dev:mock). Mirrors docs/API.md.
+import type { CreateResult, JoinResult, Member, MemberProgress } from "./types";
 
 /** Only this code "exists" in the mock, so you can try both the success and the "not found" paths. */
 export const MOCK_VALID_CODE = "1234";
@@ -52,9 +45,6 @@ export function watchMembers(
 
   return () => [first, ...timers].forEach(clearTimeout);
 }
-
-/** One person's progress through the cards (for the Waiting screen). */
-export type MemberProgress = Member & { swiped: number; total: number };
 
 /**
  * Mock of a live "progress" event (not in docs/API.md yet): calls `onUpdate`

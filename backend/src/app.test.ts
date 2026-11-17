@@ -117,6 +117,88 @@ test("everyone saying no to everything fires no_match once, and a late joiner re
   socket.disconnect();
 });
 
+// A group still in the lobby (newGroup() fetches the cards, which locks the filters)
+async function lobbyGroup() {
+  const host = (await call("POST", "/groups", { nickname: "host", location: { lat: 37.77, lng: -122.41 }, filters: {} })).body;
+  const guest = (await call("POST", `/groups/${host.joinCode}/join`, { nickname: "guest" })).body;
+  return { groupId: host.groupId as string, hostId: host.memberId as string, guestId: guest.memberId as string };
+}
+
+test("state tells phones who the host is, the filters, and whether the round started", async () => {
+  const { groupId, hostId, guestId } = await lobbyGroup();
+  const socket = io(base, { auth: { groupId, memberId: guestId }, transports: ["websocket"] });
+  const state = await new Promise<any>((resolve) => socket.once("state", resolve));
+  assert.equal(state.hostId, hostId);
+  assert.deepEqual(state.filters, {});
+  assert.equal(state.started, false);
+  socket.disconnect();
+});
+
+test("the host can change filters in the lobby and every phone hears about it", async () => {
+  const { groupId, hostId, guestId } = await lobbyGroup();
+  const socket = io(base, { auth: { groupId, memberId: guestId }, transports: ["websocket"] });
+  await new Promise((resolve) => socket.once("state", resolve));
+  const heard = new Promise<any>((resolve) => socket.once("filters_changed", resolve));
+
+  const filters = { radiusMeters: 4828, price: [1, 2], cuisine: ["mexican", "thai"] };
+  const res = await call("PATCH", `/groups/${groupId}/filters`, { filters }, hostId);
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, { ok: true, filters });
+  assert.deepEqual((await heard).filters, filters);
+
+  // A phone that connects afterwards gets them in state
+  const late = io(base, { auth: { groupId, memberId: hostId }, transports: ["websocket"] });
+  assert.deepEqual((await new Promise<any>((resolve) => late.once("state", resolve))).filters, filters);
+  late.disconnect();
+  socket.disconnect();
+});
+
+test("only the host can change filters, and bad filters are refused", async () => {
+  const { groupId, hostId, guestId } = await lobbyGroup();
+  const patch = (filters: unknown, who = hostId) => call("PATCH", `/groups/${groupId}/filters`, { filters }, who);
+
+  const guest = await patch({ radiusMeters: 1000 }, guestId);
+  assert.equal(guest.status, 403);
+  assert.equal(guest.body.error.code, "NOT_HOST");
+  assert.equal((await patch({ radiusMeters: 1000 }, "m_stranger")).status, 404);
+  assert.equal((await patch({ radiusMeters: -5 })).body.error.code, "INVALID_INPUT");
+  assert.equal((await patch({ price: [0, 5] })).body.error.code, "INVALID_INPUT");
+  assert.equal((await patch({ cuisine: "thai" })).body.error.code, "INVALID_INPUT");
+  assert.equal((await patch("everything")).body.error.code, "INVALID_INPUT");
+});
+
+test("starting the round tells every phone, and locks the filters", async () => {
+  const { groupId, hostId, guestId } = await lobbyGroup();
+  const socket = io(base, { auth: { groupId, memberId: guestId }, transports: ["websocket"] });
+  await new Promise((resolve) => socket.once("state", resolve));
+  let events = 0;
+  socket.on("round_started", () => events++);
+  const heard = new Promise((resolve) => socket.once("round_started", resolve));
+
+  assert.equal((await call("POST", `/groups/${groupId}/start`, {}, guestId)).body.error.code, "NOT_HOST");
+  assert.deepEqual((await call("POST", `/groups/${groupId}/start`, {}, hostId)).body, { ok: true });
+  await heard;
+  // Sending it again is harmless and doesn't announce it twice
+  assert.deepEqual((await call("POST", `/groups/${groupId}/start`, {}, hostId)).body, { ok: true });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(events, 1);
+
+  const locked = await call("PATCH", `/groups/${groupId}/filters`, { filters: { radiusMeters: 1000 } }, hostId);
+  assert.equal(locked.status, 409);
+  assert.equal(locked.body.error.code, "ROUND_STARTED");
+
+  const late = io(base, { auth: { groupId, memberId: hostId }, transports: ["websocket"] });
+  assert.equal((await new Promise<any>((resolve) => late.once("state", resolve))).started, true);
+  late.disconnect();
+  socket.disconnect();
+});
+
+test("filters can't change once the cards were fetched", async () => {
+  const { groupId, ids } = await newGroup(2);
+  const res = await call("PATCH", `/groups/${groupId}/filters`, { filters: { radiusMeters: 1000 } }, ids[0]);
+  assert.equal(res.body.error.code, "ROUND_STARTED");
+});
+
 test("if finding restaurants fails, the next request tries again", async () => {
   let calls = 0;
   const flaky = {

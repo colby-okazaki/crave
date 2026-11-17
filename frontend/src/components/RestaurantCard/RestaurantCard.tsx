@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import type { Restaurant } from "../../api/restaurants";
+import type { Restaurant } from "../../api/types";
 import { compactCount, isOpenNow, milesAway, priceLabel } from "../../utils/format";
 import starIcon from "../../assets/icons/star.svg";
 import styles from "./RestaurantCard.module.css";

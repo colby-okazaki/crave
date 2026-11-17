@@ -1,7 +1,7 @@
 import cors from "cors";
 import express, { type ErrorRequestHandler } from "express";
 import { corsOrigin } from "./cors.js";
-import { ApiError, createGroup, findGroupForMember, joinGroup } from "./groups.js";
+import { ApiError, createGroup, findGroupForMember, isHost, joinGroup, type Filters, type Group } from "./groups.js";
 import { emitToGroup } from "./live.js";
 import { placeFinder, restaurantProvider } from "./providers.js";
 import type { PlaceFinder } from "./places.js";
@@ -26,6 +26,43 @@ function readLocation(value: any): { lat: number; lng: number } {
     invalid("Location needs a valid lat and lng.");
   }
   return { lat, lng };
+}
+
+// Filters the host can set: all optional, checked so bad values never reach the search
+function readFilters(value: any): Filters {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) invalid("Filters must be an object.");
+  const filters: Filters = {};
+  if (value.radiusMeters !== undefined) {
+    if (typeof value.radiusMeters !== "number" || !(value.radiusMeters > 0) || value.radiusMeters > 100_000) {
+      invalid("radiusMeters must be a positive number of meters.");
+    }
+    filters.radiusMeters = value.radiusMeters;
+  }
+  if (value.price !== undefined) {
+    if (!Array.isArray(value.price) || !value.price.every((p: unknown) => p === 1 || p === 2 || p === 3 || p === 4)) {
+      invalid("price must be a list of levels from 1 to 4.");
+    }
+    filters.price = value.price;
+  }
+  if (value.cuisine !== undefined) {
+    if (
+      !Array.isArray(value.cuisine) ||
+      value.cuisine.length > 50 ||
+      !value.cuisine.every((c: unknown) => typeof c === "string" && c.length > 0 && c.length <= 40)
+    ) {
+      invalid("cuisine must be a list of short names.");
+    }
+    filters.cuisine = value.cuisine;
+  }
+  return filters;
+}
+
+// The group for a host-only action: must be a member, and the host
+function hostGroup(groupId: string, memberId: string): Group {
+  const group = findGroupForMember(groupId, memberId);
+  if (!group) throw new ApiError(404, "GROUP_NOT_FOUND", "That code doesn't match an open group.");
+  if (!isHost(group, memberId)) throw new ApiError(403, "NOT_HOST", "Only the host can do that.");
+  return group;
 }
 
 export function buildApp(provider: RestaurantProvider = restaurantProvider, finder: PlaceFinder = placeFinder) {
@@ -62,6 +99,28 @@ export function buildApp(provider: RestaurantProvider = restaurantProvider, find
     const member = result.members.find((m) => m.id === result.memberId);
     emitToGroup(result.groupId, "member_joined", { member });
     res.json(result);
+  });
+
+  // Host changes filters in the lobby. Locked once the round starts or the cards were fetched,
+  // because everyone has to swipe the same stack.
+  app.patch("/groups/:id/filters", (req, res) => {
+    const group = hostGroup(req.params.id, req.header("X-Member-Id") ?? "");
+    if (group.started || group.restaurants) {
+      throw new ApiError(409, "ROUND_STARTED", "The round has started, so the filters can't change.");
+    }
+    group.filters = readFilters(req.body?.filters);
+    emitToGroup(group.id, "filters_changed", { filters: group.filters });
+    res.json({ ok: true, filters: group.filters });
+  });
+
+  // Host starts the round: every phone in the lobby moves to swiping. Safe to send twice.
+  app.post("/groups/:id/start", (req, res) => {
+    const group = hostGroup(req.params.id, req.header("X-Member-Id") ?? "");
+    if (!group.started) {
+      group.started = true;
+      emitToGroup(group.id, "round_started", {});
+    }
+    res.json({ ok: true });
   });
 
   app.get("/groups/:id/restaurants", async (req, res) => {

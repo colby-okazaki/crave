@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from "react";
-import type { Restaurant } from "../../api/restaurants";
+import type { Restaurant } from "../../api/types";
 import { hoursToday, mapsUrl, menuUrl } from "../../utils/format";
 import { Button } from "../Button/Button";
 import { ChipLabel } from "../Chip/Chip";

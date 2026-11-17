@@ -15,8 +15,10 @@ X-Member-Id: m_7f3a
 | Start a group | `POST /groups` | Group ID, join code, your member ID |
 | Join a group | `POST /groups/:code/join` | Group info, members, your member ID |
 | Get restaurant cards | `GET /groups/:id/restaurants` | List of places |
+| Change filters (host, in the lobby) | `PATCH /groups/:id/filters` | OK and the saved filters |
+| Start the round (host) | `POST /groups/:id/start` | OK |
 | Send a swipe | `POST /groups/:id/swipes` | OK, or a match if this swipe made one |
-| Live updates | Socket.io connection | `state`, `member_joined`, `match_found` events |
+| Live updates | Socket.io connection | `state`, `member_joined`, `filters_changed`, `round_started`, `match_found`, `no_match` events |
 
 The join code is a **4-digit number sent as text** (for example `"0427"`, so keep any leading zero).
 
@@ -112,6 +114,31 @@ Every member gets the same list in the same order. See [`mock/restaurants.json`]
 
 With real data (OpenStreetMap, free) every place has a name, address and location. Price and rating are always `null`; photo, hours and menu link are filled in only when OpenStreetMap has them, which is for some places and not others. The fake data in `mock/` has them filled in. Up to 20 places come back, nearest first.
 
+### Change filters (host only)
+
+`PATCH /groups/g_9c21/filters` with the host's `X-Member-Id`
+
+```json
+{ "filters": { "radiusMeters": 4828, "price": [1, 2], "cuisine": ["mexican", "thai"] } }
+```
+
+Response `200`:
+
+```json
+{ "ok": true, "filters": { "radiusMeters": 4828, "price": [1, 2], "cuisine": ["mexican", "thai"] } }
+```
+
+- Replaces the filters sent with "Start a group". Every field is optional; leave one out for "any".
+- Every phone gets `filters_changed`, so guests see what the host picked.
+- Only the host (the person who started the group): anyone else gets `403 NOT_HOST`.
+- Only in the lobby: once the round started or the cards were fetched, it's `409 ROUND_STARTED` (everyone has to swipe the same stack).
+
+### Start the round (host only)
+
+`POST /groups/g_9c21/start` with the host's `X-Member-Id`, no body.
+
+Response `200`: `{ "ok": true }`. Every phone gets `round_started` and moves from the lobby to swiping. Sending it again is harmless. Only the host can start (`403 NOT_HOST`).
+
 ### Send a swipe
 
 `POST /groups/g_9c21/swipes`
@@ -164,7 +191,9 @@ If the IDs don't belong to an open group, the connection is refused and `connect
 
 | Event | When | Payload |
 | --- | --- | --- |
-| `state` | Right after connecting, and again after every reconnect, so a phone that dropped catches up | `{ "members": [ … ], "match": null, "noMatch": false }`, or `"match": { "restaurant": { … } }` (same restaurant as `match_found`) once the group has matched |
+| `state` | Right after connecting, and again after every reconnect, so a phone that dropped catches up | `{ "members": [ … ], "hostId": "m_7f3a", "filters": { … }, "started": false, "match": null, "noMatch": false }`, or `"match": { "restaurant": { … } }` (same restaurant as `match_found`) once the group has matched |
+| `filters_changed` | The host changed the filters in the lobby | `{ "filters": { "radiusMeters": 4828, "price": [1, 2], "cuisine": ["mexican"] } }` |
+| `round_started` | The host started the round: go to swiping | `{}` |
 | `member_joined` | Someone joins the group | `{ "member": { "id": "m_b812", "nickname": "Davin" } }` |
 | `no_match` | Every member has swiped every place and nobody matched. Sent once; a person joining afterwards reopens the stack (`noMatch` goes back to false) | `{}` |
 | `match_found` | A swipe made a match | `{ "restaurant": { "id": "r_001", "name": "La Taqueria", "address": "2889 Mission St, San Francisco, CA", "hours": "11:00–21:00", "location": { "lat": 37.7509, "lng": -122.4181 } } }` |
@@ -186,6 +215,8 @@ Every error uses the same shape, so the front end can show `message` directly:
 | `NO_RESTAURANTS` | 200 + empty list | Nothing matched the filters (not an error; show the "widen filters" screen) |
 | `RESTAURANTS_UNAVAILABLE` | 503 | The restaurant source is busy or down. Safe to retry; the next request tries again |
 | `RATE_LIMITED` | 429 | Too many wrong join codes (10 a minute), too many groups created (20 a minute), or too many requests overall (300 a minute) from one address. Show `message`; the `Retry-After` header says how many seconds to wait |
+| `NOT_HOST` | 403 | Only the host can change filters or start the round |
+| `ROUND_STARTED` | 409 | Filters can't change after the round started |
 | `SERVER_BUSY` | 503 | Every join code is in use (rare; try again shortly) |
 | `SERVER_ERROR` | 500 | Anything else |
 

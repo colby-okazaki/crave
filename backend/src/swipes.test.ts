@@ -22,6 +22,7 @@ const groupOf = (...ids: string[]): Group => ({
   location: { lat: 0, lng: 0 },
   filters: {},
   members: ids.map((id) => ({ id, nickname: id })),
+  hostId: ids[0],
   swipes: new Map(),
   createdAt: Date.now(),
 });

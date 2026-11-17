@@ -1,0 +1,153 @@
+/* Same layout as Join a group: fills the screen so Create sits at the bottom. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-gap);
+  flex: 1 0 auto;
+}
+
+.title {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+  line-height: normal;
+}
+
+/* Search box with its button on the same line */
+.searchRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-chip-gap);
+}
+
+.searchField {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.searchButton {
+  width: auto;
+  flex-shrink: 0;
+}
+
+/* Text button with a pin; tap area stays 44px */
+.locate {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-filter-label);
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font-size: var(--font-size-meta);
+  font-weight: var(--font-weight-semibold);
+}
+
+.locate img {
+  display: block;
+}
+
+.locate::after {
+  content: "";
+  position: absolute;
+  inset: calc((100% - var(--tap-target-min)) / 2) -8px;
+}
+
+.locate:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.status {
+  min-height: 1lh;
+  margin-top: calc(var(--space-label) - var(--space-gap));
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+}
+
+.status:empty {
+  display: none;
+}
+
+.error,
+.createError {
+  color: var(--color-error);
+  font-weight: var(--font-weight-medium);
+}
+
+.createError {
+  font-size: var(--font-size-label);
+  text-align: center;
+}
+
+/* Places to pick from */
+.places {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: var(--border-width-hairline) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.place {
+  display: flex;
+  align-items: center;
+  gap: var(--space-info-icon);
+  min-height: var(--input-height);
+  padding: 0 var(--space-gap);
+  border: 0;
+  border-top: var(--border-width-hairline) solid var(--color-border);
+  background: none;
+  color: var(--color-text);
+  font-size: var(--font-size-meta);
+  text-align: left;
+  transition: background-color var(--duration-press) var(--ease-out);
+}
+
+.place:first-child {
+  border-top: 0;
+}
+
+.place img {
+  display: block;
+  flex-shrink: 0;
+}
+
+.placeLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.hint {
+  min-height: 1lh;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+}
+
+@media (hover: hover) {
+  .place:hover:not(.selected) {
+    background: var(--color-bg);
+  }
+  .locate:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .place {
+    transition: none;
+  }
+}
