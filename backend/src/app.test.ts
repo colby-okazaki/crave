@@ -263,6 +263,66 @@ test("the last person leaving closes the group", async () => {
   assert.equal((await call("POST", `/groups/${joinCode}/join`, { nickname: "late" })).body.error.code, "GROUP_NOT_FOUND");
 });
 
+test("progress tells phones how far each member is, and state catches up late phones", async () => {
+  const { groupId, ids, restaurants } = await newGroup(2);
+  const socket = io(base, { auth: { groupId, memberId: ids[0] }, transports: ["websocket"] });
+  await new Promise((resolve) => socket.once("state", resolve));
+  const heard = new Promise<any>((resolve) => socket.once("progress", resolve));
+
+  await call("POST", `/groups/${groupId}/swipes`, { restaurantId: restaurants[0].id, liked: false }, ids[1]);
+  assert.deepEqual(await heard, { memberId: ids[1], swiped: 1, total: restaurants.length });
+
+  const late = io(base, { auth: { groupId, memberId: ids[1] }, transports: ["websocket"] });
+  const state = await new Promise<any>((resolve) => late.once("state", resolve));
+  assert.deepEqual(state.progress, [
+    { memberId: ids[0], swiped: 0, total: restaurants.length },
+    { memberId: ids[1], swiped: 1, total: restaurants.length },
+  ]);
+  late.disconnect();
+  socket.disconnect();
+});
+
+test("the host can end the round: no_match if nobody matched, and only once", async () => {
+  const { groupId, ids } = await newGroup(2);
+  const socket = io(base, { auth: { groupId, memberId: ids[1] }, transports: ["websocket"] });
+  await new Promise((resolve) => socket.once("state", resolve));
+  let events = 0;
+  socket.on("no_match", () => events++);
+  const heard = new Promise((resolve) => socket.once("no_match", resolve));
+
+  assert.equal((await call("POST", `/groups/${groupId}/end`, {}, ids[1])).body.error.code, "NOT_HOST");
+  assert.deepEqual((await call("POST", `/groups/${groupId}/end`, {}, ids[0])).body, { ok: true, match: null, noMatch: true });
+  await heard;
+  await call("POST", `/groups/${groupId}/end`, {}, ids[0]);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(events, 1);
+  socket.disconnect();
+});
+
+test("ending the round after a match just returns the match", async () => {
+  const { groupId, ids, restaurants } = await newGroup(2);
+  const target = restaurants[0].id;
+  for (const id of ids) await call("POST", `/groups/${groupId}/swipes`, { restaurantId: target, liked: true }, id);
+  const res = await call("POST", `/groups/${groupId}/end`, {}, ids[0]);
+  assert.deepEqual(res.body, { ok: true, match: { restaurantId: target }, noMatch: false });
+});
+
+test("results lists the places most people liked, most likes first", async () => {
+  const { groupId, ids, restaurants } = await newGroup(3);
+  const [a, b, c] = restaurants.map((r) => r.id);
+  const swipe = (who: number, id: string, liked: boolean) =>
+    call("POST", `/groups/${groupId}/swipes`, { restaurantId: id, liked }, ids[who]);
+  await swipe(0, a, true);
+  await swipe(1, a, true);
+  await swipe(2, a, false);
+  await swipe(0, b, true);
+  await swipe(1, c, false);
+
+  const res = await call("GET", `/groups/${groupId}/results`, undefined, ids[0]);
+  assert.deepEqual(res.body, { results: [{ restaurantId: a, likes: 2 }, { restaurantId: b, likes: 1 }] });
+  assert.equal((await call("GET", `/groups/${groupId}/results`, undefined, "m_stranger")).status, 404);
+});
+
 test("if finding restaurants fails, the next request tries again", async () => {
   let calls = 0;
   const flaky = {

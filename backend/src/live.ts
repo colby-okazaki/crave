@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from "node:http";
 import { Server } from "socket.io";
 import { corsOrigin } from "./cors.js";
-import { findGroupForMember } from "./groups.js";
+import { findGroupForMember, progressOf } from "./groups.js";
 import { matchPayload } from "./swipes.js";
 
 let io: Server | undefined;
@@ -35,6 +35,7 @@ export function attachLive(server: HttpServer) {
       hostId: group?.hostId ?? null,
       filters: group?.filters ?? {},
       started: group?.started ?? false,
+      progress: group ? progressOf(group) : [],
       noMatch: group?.exhausted ?? false,
       match: group?.match ? { restaurant: matchPayload(group.match) } : null,
     });
