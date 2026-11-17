@@ -1,13 +1,13 @@
 import cors from "cors";
 import express, { type ErrorRequestHandler } from "express";
 import { corsOrigin } from "./cors.js";
-import { ApiError, createGroup, findGroupForMember, isHost, joinGroup, type Filters, type Group } from "./groups.js";
+import { ApiError, createGroup, findGroupForMember, isHost, joinGroup, leaveGroup, type Filters, type Group } from "./groups.js";
 import { emitToGroup } from "./live.js";
 import { placeFinder, restaurantProvider } from "./providers.js";
 import type { PlaceFinder } from "./places.js";
-import type { RestaurantProvider } from "./restaurants.js";
+import type { Restaurant, RestaurantProvider } from "./restaurants.js";
 import { createLimiters } from "./ratelimit.js";
-import { isExhausted, matchPayload, recordSwipe } from "./swipes.js";
+import { isExhausted, matchAfterLeave, matchPayload, recordSwipe } from "./swipes.js";
 
 function invalid(message: string): never {
   throw new ApiError(400, "INVALID_INPUT", message);
@@ -120,6 +120,30 @@ export function buildApp(provider: RestaurantProvider = restaurantProvider, find
       group.started = true;
       emitToGroup(group.id, "round_started", {});
     }
+    res.json({ ok: true });
+  });
+
+  // A member leaves for good. Everyone else is told, and the group is re-checked: with the leaver's
+  // votes gone, the rest may now match, or may have run out of places.
+  app.post("/groups/:id/leave", async (req, res) => {
+    const memberId = req.header("X-Member-Id") ?? "";
+    const group = findGroupForMember(req.params.id, memberId);
+    if (!group) {
+      throw new ApiError(404, "GROUP_NOT_FOUND", "That code doesn't match an open group.");
+    }
+    const { hostId, closed } = leaveGroup(group, memberId);
+    if (closed) {
+      res.json({ ok: true });
+      return;
+    }
+    emitToGroup(group.id, "member_left", { memberId, hostId });
+
+    const stack = await (group.restaurants ?? Promise.resolve([] as Restaurant[])).catch(() => [] as Restaurant[]);
+    const match = matchAfterLeave(group, stack);
+    if (match) emitToGroup(group.id, "match_found", { restaurant: matchPayload(match) });
+    const exhausted = isExhausted(group, stack.length);
+    if (exhausted && !group.exhausted) emitToGroup(group.id, "no_match", {});
+    group.exhausted = exhausted;
     res.json({ ok: true });
   });
 

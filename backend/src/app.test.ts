@@ -199,6 +199,70 @@ test("filters can't change once the cards were fetched", async () => {
   assert.equal(res.body.error.code, "ROUND_STARTED");
 });
 
+async function lobbyGroupOf(members: number) {
+  const host = (await call("POST", "/groups", { nickname: "host", location: { lat: 37.77, lng: -122.41 }, filters: {} })).body;
+  const ids = [host.memberId as string];
+  for (let i = 1; i < members; i++) {
+    ids.push((await call("POST", `/groups/${host.joinCode}/join`, { nickname: `p${i}` })).body.memberId);
+  }
+  return { groupId: host.groupId as string, joinCode: host.joinCode as string, ids };
+}
+
+test("someone leaving tells the others, frees their nickname, and hands the host role on", async () => {
+  const { groupId, joinCode, ids } = await lobbyGroupOf(3);
+  const socket = io(base, { auth: { groupId, memberId: ids[1] }, transports: ["websocket"] });
+  await new Promise((resolve) => socket.once("state", resolve));
+  const heard = new Promise<any>((resolve) => socket.once("member_left", resolve));
+
+  assert.deepEqual((await call("POST", `/groups/${groupId}/leave`, {}, ids[0])).body, { ok: true });
+  const event = await heard;
+  assert.equal(event.memberId, ids[0]);
+  assert.equal(event.hostId, ids[1]);
+
+  // The leaver is out: their ID no longer works, and the nickname is free
+  assert.equal((await call("POST", `/groups/${groupId}/leave`, {}, ids[0])).status, 404);
+  assert.equal((await call("POST", `/groups/${joinCode}/join`, { nickname: "host" })).status, 200);
+  // The new host can act as host
+  assert.equal((await call("POST", `/groups/${groupId}/start`, {}, ids[1])).status, 200);
+  socket.disconnect();
+});
+
+test("when the person who hadn't liked a place leaves, the rest match", async () => {
+  const { groupId, ids, restaurants } = await newGroup(3);
+  const socket = io(base, { auth: { groupId, memberId: ids[0] }, transports: ["websocket"] });
+  await new Promise((resolve) => socket.once("state", resolve));
+  const heard = new Promise<any>((resolve) => socket.once("match_found", resolve));
+
+  const target = restaurants[0].id;
+  await call("POST", `/groups/${groupId}/swipes`, { restaurantId: target, liked: true }, ids[0]);
+  await call("POST", `/groups/${groupId}/swipes`, { restaurantId: target, liked: true }, ids[1]);
+  await call("POST", `/groups/${groupId}/swipes`, { restaurantId: target, liked: false }, ids[2]);
+  await call("POST", `/groups/${groupId}/leave`, {}, ids[2]);
+  assert.equal((await heard).restaurant.id, target);
+  socket.disconnect();
+});
+
+test("when the slowest swiper leaves, the rest can be out of places", async () => {
+  const { groupId, ids, restaurants } = await newGroup(3);
+  const socket = io(base, { auth: { groupId, memberId: ids[0] }, transports: ["websocket"] });
+  await new Promise((resolve) => socket.once("state", resolve));
+  const heard = new Promise((resolve) => socket.once("no_match", resolve));
+
+  for (const r of restaurants) {
+    await call("POST", `/groups/${groupId}/swipes`, { restaurantId: r.id, liked: false }, ids[0]);
+    await call("POST", `/groups/${groupId}/swipes`, { restaurantId: r.id, liked: false }, ids[1]);
+  }
+  await call("POST", `/groups/${groupId}/leave`, {}, ids[2]);
+  await heard;
+  socket.disconnect();
+});
+
+test("the last person leaving closes the group", async () => {
+  const { groupId, joinCode, ids } = await lobbyGroupOf(1);
+  assert.deepEqual((await call("POST", `/groups/${groupId}/leave`, {}, ids[0])).body, { ok: true });
+  assert.equal((await call("POST", `/groups/${joinCode}/join`, { nickname: "late" })).body.error.code, "GROUP_NOT_FOUND");
+});
+
 test("if finding restaurants fails, the next request tries again", async () => {
   let calls = 0;
   const flaky = {

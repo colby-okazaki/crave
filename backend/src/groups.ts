@@ -138,3 +138,18 @@ export function joinGroup(joinCode: string, nickname: string) {
   group.exhausted = false;
   return { groupId: group.id, memberId: member.id, members: group.members };
 }
+
+// Takes a member out of the group. Their votes go with them, so they can't block a match,
+// and their nickname is free again. If the host leaves, the longest-standing member takes
+// over. The last person leaving closes the group.
+export function leaveGroup(group: Group, memberId: string): { hostId: string | null; closed: boolean } {
+  group.members = group.members.filter((m) => m.id !== memberId);
+  for (const votes of group.swipes.values()) votes.delete(memberId);
+  if (group.members.length === 0) {
+    groupsById.delete(group.id);
+    groupsByCode.delete(group.joinCode);
+    return { hostId: null, closed: true };
+  }
+  if (group.hostId === memberId) group.hostId = group.members[0].id;
+  return { hostId: group.hostId, closed: false };
+}

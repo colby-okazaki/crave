@@ -17,8 +17,9 @@ X-Member-Id: m_7f3a
 | Get restaurant cards | `GET /groups/:id/restaurants` | List of places |
 | Change filters (host, in the lobby) | `PATCH /groups/:id/filters` | OK and the saved filters |
 | Start the round (host) | `POST /groups/:id/start` | OK |
+| Leave the group | `POST /groups/:id/leave` | OK |
 | Send a swipe | `POST /groups/:id/swipes` | OK, or a match if this swipe made one |
-| Live updates | Socket.io connection | `state`, `member_joined`, `filters_changed`, `round_started`, `match_found`, `no_match` events |
+| Live updates | Socket.io connection | `state`, `member_joined`, `member_left`, `filters_changed`, `round_started`, `match_found`, `no_match` events |
 
 The join code is a **4-digit number sent as text** (for example `"0427"`, so keep any leading zero).
 
@@ -139,6 +140,17 @@ Response `200`:
 
 Response `200`: `{ "ok": true }`. Every phone gets `round_started` and moves from the lobby to swiping. Sending it again is harmless. Only the host can start (`403 NOT_HOST`).
 
+### Leave the group
+
+`POST /groups/g_9c21/leave` with your `X-Member-Id`, no body.
+
+Response `200`: `{ "ok": true }`.
+
+- You're out for good: your member ID stops working (`404 GROUP_NOT_FOUND`), your swipes are removed, and your nickname is free again.
+- Everyone else gets `member_left` with `{ "memberId", "hostId" }`. If the host left, `hostId` is the new host (the longest-standing member).
+- Leaving can finish the round for the others: if everyone left had already liked a place you hadn't, they get `match_found`; if they've swiped everything, `no_match`.
+- If you were the last person, the group closes.
+
 ### Send a swipe
 
 `POST /groups/g_9c21/swipes`
@@ -194,6 +206,7 @@ If the IDs don't belong to an open group, the connection is refused and `connect
 | `state` | Right after connecting, and again after every reconnect, so a phone that dropped catches up | `{ "members": [ … ], "hostId": "m_7f3a", "filters": { … }, "started": false, "match": null, "noMatch": false }`, or `"match": { "restaurant": { … } }` (same restaurant as `match_found`) once the group has matched |
 | `filters_changed` | The host changed the filters in the lobby | `{ "filters": { "radiusMeters": 4828, "price": [1, 2], "cuisine": ["mexican"] } }` |
 | `round_started` | The host started the round: go to swiping | `{}` |
+| `member_left` | Someone left the group | `{ "memberId": "m_b812", "hostId": "m_7f3a" }` (`hostId` is the host now, in case it changed) |
 | `member_joined` | Someone joins the group | `{ "member": { "id": "m_b812", "nickname": "Davin" } }` |
 | `no_match` | Every member has swiped every place and nobody matched. Sent once; a person joining afterwards reopens the stack (`noMatch` goes back to false) | `{}` |
 | `match_found` | A swipe made a match | `{ "restaurant": { "id": "r_001", "name": "La Taqueria", "address": "2889 Mission St, San Francisco, CA", "hours": "11:00–21:00", "location": { "lat": 37.7509, "lng": -122.4181 } } }` |
