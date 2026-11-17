@@ -238,6 +238,12 @@
   font-weight: var(--font-weight-semibold);
 }
 
+/* "Reconnecting… 2 swipes waiting to send" */
+.hintNotice {
+  color: var(--color-error);
+  font-weight: var(--font-weight-semibold);
+}
+
 .hintPass {
   color: var(--color-pass);
   font-weight: var(--font-weight-semibold);

@@ -28,6 +28,13 @@
   text-align: center;
 }
 
+.notice {
+  color: var(--color-error);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
 /* Who's done */
 .list {
   display: flex;

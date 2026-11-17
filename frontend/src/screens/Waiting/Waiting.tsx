@@ -22,6 +22,8 @@ type WaitingProps = {
   onNudge?: (memberIds: string[]) => Promise<void>;
   /** Host only: stop the round and use the likes so far. Leave out to hide it. */
   onEndRound?: () => void;
+  /** e.g. "Reconnecting… 2 swipes waiting to send". */
+  notice?: string;
 };
 
 /** Done, still swiping, or unknown (the server doesn't track progress yet). */
@@ -31,7 +33,7 @@ function progressOf(m: WaitingMember, myId: string): "done" | "swiping" | "unkno
   return m.swiped >= m.total ? "done" : "swiping";
 }
 
-export function Waiting({ members, myId, isHost, onNudge, onEndRound }: WaitingProps) {
+export function Waiting({ members, myId, isHost, onNudge, onEndRound, notice }: WaitingProps) {
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [confirmEnd, setConfirmEnd] = useState(false);
@@ -87,6 +89,11 @@ export function Waiting({ members, myId, isHost, onNudge, onEndRound }: WaitingP
       <p className={styles.subtitle} aria-live="polite">
         {subtitle}
       </p>
+      {notice && (
+        <p className={styles.notice} role="status">
+          {notice}
+        </p>
+      )}
 
       {members && (
         <ul className={styles.list} aria-label="Who's done">

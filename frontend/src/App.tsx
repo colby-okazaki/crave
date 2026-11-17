@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router";
+import { createBrowserRouter, Navigate, RouterProvider, useBlocker, useLocation, useNavigate, useSearchParams } from "react-router";
 import { api } from "./api";
 import { closeLive, useLive } from "./api/live";
+import { queueNotice, swipeQueueFor, useSwipeQueue } from "./api/swipeQueue";
+import { ConfirmDialog } from "./components/ConfirmDialog/ConfirmDialog";
 import { ApiError, type GroupRef, type LiveSnapshot, type MemberProgress, type Restaurant } from "./api/types";
 import { CreateGroup } from "./screens/CreateGroup/CreateGroup";
 import { Home } from "./screens/Home/Home";
@@ -78,6 +80,28 @@ function useGroupNavigation(session: GroupSession | null, live: LiveSnapshot, fo
       navigate("/swipe", { state: group, replace: true });
     }
   }, [live.ended, live.match, live.noMatch, live.started]);
+}
+
+/**
+ * The browser's Back button (or the iPhone swipe-back gesture) would quietly leave the group,
+ * so ask first, like the Leave button does. Render the returned dialog next to the screen.
+ */
+function useConfirmLeaveOnBack() {
+  const blocker = useBlocker(({ historyAction }) => historyAction === "POP");
+  return (
+    <ConfirmDialog
+      open={blocker.state === "blocked"}
+      title="Leave group?"
+      confirmLabel="Leave"
+      onConfirm={() => {
+        closeLive();
+        blocker.proceed?.();
+      }}
+      onCancel={() => blocker.reset?.()}
+    >
+      You can rejoin later with the code.
+    </ConfirmDialog>
+  );
 }
 
 function HomeRoute() {
@@ -161,6 +185,7 @@ function LobbyRoute() {
   const pending = useRef<{ timer: number; filters: LobbyFilters } | null>(null);
 
   useGroupNavigation(session, live, { started: true });
+  const confirmLeave = useConfirmLeaveOnBack();
 
   const sendFilters = useCallback(
     (filters: LobbyFilters) =>
@@ -174,49 +199,52 @@ function LobbyRoute() {
   const filters = (isHost && picked) || fromApiFilters(live.filters, DEFAULT_FILTERS);
 
   return (
-    <Lobby
-      code={session.code}
-      members={live.members}
-      myId={session.memberId}
-      isHost={isHost}
-      filters={filters}
-      error={error}
-      onFiltersChange={(next) => {
-        setPicked(next);
-        setError("");
-        // Send the host's filters a moment after they stop tapping.
-        window.clearTimeout(pending.current?.timer);
-        pending.current = {
-          filters: next,
-          timer: window.setTimeout(() => {
-            pending.current = null;
-            sendFilters(next).catch(() => setError("Couldn't save the filters. Check your connection."));
-          }, 300),
-        };
-      }}
-      onShareInvite={() => shareInvite(session.code)}
-      onStart={async () => {
-        setError("");
-        try {
-          // Send any filter change that's still waiting, then start everyone.
-          if (pending.current) {
-            window.clearTimeout(pending.current.timer);
-            const { filters: last } = pending.current;
-            pending.current = null;
-            await sendFilters(last);
+    <>
+      <Lobby
+        code={session.code}
+        members={live.members}
+        myId={session.memberId}
+        isHost={isHost}
+        filters={filters}
+        error={error}
+        onFiltersChange={(next) => {
+          setPicked(next);
+          setError("");
+          // Send the host's filters a moment after they stop tapping.
+          window.clearTimeout(pending.current?.timer);
+          pending.current = {
+            filters: next,
+            timer: window.setTimeout(() => {
+              pending.current = null;
+              sendFilters(next).catch(() => setError("Couldn't save the filters. Check your connection."));
+            }, 300),
+          };
+        }}
+        onShareInvite={() => shareInvite(session.code)}
+        onStart={async () => {
+          setError("");
+          try {
+            // Send any filter change that's still waiting, then start everyone.
+            if (pending.current) {
+              window.clearTimeout(pending.current.timer);
+              const { filters: last } = pending.current;
+              pending.current = null;
+              await sendFilters(last);
+            }
+            await api.startRound(session.groupId, session.memberId);
+            navigate("/swipe", { state: groupOnly(session), replace: true });
+          } catch (e) {
+            setError(errorMessage(e));
           }
-          await api.startRound(session.groupId, session.memberId);
-          navigate("/swipe", { state: groupOnly(session), replace: true });
-        } catch (e) {
-          setError(errorMessage(e));
-        }
-      }}
-      // TODO: tell the backend we left (no endpoint yet); until then a leaver still counts for matches.
-      onLeave={() => {
-        closeLive();
-        navigate("/", { replace: true });
-      }}
-    />
+        }}
+        // TODO: tell the backend we left (no endpoint yet); until then a leaver still counts for matches.
+        onLeave={() => {
+          closeLive();
+          navigate("/", { replace: true });
+        }}
+      />
+      {confirmLeave}
+    </>
   );
 }
 
@@ -225,8 +253,27 @@ function SwipeRoute() {
   const session = useLocation().state as GroupSession | null;
   const live = useLive(session);
   const [load, setLoad] = useState<SwipeLoadState>({ status: "loading" });
+  const queue = useSwipeQueue(session);
+  const confirmLeave = useConfirmLeaveOnBack();
 
   useGroupNavigation(session, live, { results: true });
+
+  // A swipe's answer can say match / no match before the live update arrives.
+  useEffect(() => {
+    if (!session) return;
+    const group = groupOnly(session);
+    if (queue.ended) {
+      closeLive();
+      navigate("/", { replace: true, state: { notice: "That group has ended. Start a new one, or join another." } });
+    } else if (queue.match) {
+      // Use the full card (photo, price…) when we have it; the swipe answer only has the id.
+      const restaurants = load.status === "ready" ? load.restaurants : [];
+      const place = restaurants.find((r) => r.id === queue.match);
+      if (place) navigate("/match", { state: { ...group, places: [place] }, replace: true });
+    } else if (queue.noMatch) {
+      navigate("/no-match", { state: group, replace: true });
+    }
+  }, [queue.ended, queue.match, queue.noMatch]);
 
   const fetchRestaurants = useCallback(() => {
     if (!session) return;
@@ -241,38 +288,33 @@ function SwipeRoute() {
 
   if (!session) return <Navigate to="/" replace />;
   const group = groupOnly(session);
+  // After a refresh, start at the first card you haven't swiped yet.
+  const swiped = swipeQueueFor(session).swipedIds();
+  const restaurants = load.status === "ready" ? load.restaurants : [];
+  const firstUnswiped = restaurants.findIndex((r) => !swiped.has(r.id));
 
   return (
-    <Swipe
-      load={load}
-      onRetry={fetchRestaurants}
-      onChangeFilters={() => navigate("/lobby", { state: group, replace: true })}
-      onSwipe={(restaurant, liked) => {
-        // Sent in the background so the next card shows right away. Retried once on a bad
-        // connection (safe: the server only counts the first swipe on a place).
-        const send = () => api.sendSwipe(session.groupId, session.memberId, restaurant.id, liked);
-        send()
-          .catch(() => send())
-          .then((result) => {
-            // You were the last one to finish and nobody matched.
-            if (result.noMatch) return navigate("/no-match", { state: group, replace: true });
-            if (!result.match) return;
-            // Use the full card (photo, price…) when we have it; match_found only sends the basics.
-            const restaurants = load.status === "ready" ? load.restaurants : [];
-            const place = restaurants.find((r) => r.id === result.match?.restaurantId) ?? restaurant;
-            navigate("/match", { state: { ...group, places: [place] }, replace: true });
-          })
-          .catch((error) => console.warn("Swipe not sent", error));
-      }}
-      onFinished={() => {
-        const total = load.status === "ready" ? load.restaurants.length : undefined;
-        navigate("/waiting", { state: { ...group, total }, replace: true });
-      }}
-      onLeave={() => {
-        closeLive();
-        navigate("/", { replace: true });
-      }}
-    />
+    <>
+      <Swipe
+        load={load}
+        initialIndex={firstUnswiped === -1 ? restaurants.length : firstUnswiped}
+        notice={queueNotice(queue)}
+        onRetry={fetchRestaurants}
+        onChangeFilters={() => navigate("/lobby", { state: group, replace: true })}
+        // Queued and sent in the background, so the next card shows right away. A swipe that
+        // can't be sent (bad connection) waits and retries; the screen says so.
+        onSwipe={(restaurant, liked) => swipeQueueFor(session).add(restaurant.id, liked)}
+        onFinished={() => {
+          const total = load.status === "ready" ? load.restaurants.length : undefined;
+          navigate("/waiting", { state: { ...group, total }, replace: true });
+        }}
+        onLeave={() => {
+          closeLive();
+          navigate("/", { replace: true });
+        }}
+      />
+      {confirmLeave}
+    </>
   );
 }
 
@@ -282,6 +324,8 @@ function WaitingRoute() {
   const live = useLive(session);
   // Per-person progress only exists in fake-data mode for now.
   const [progress, setProgress] = useState<MemberProgress[] | null>(null);
+  const queue = useSwipeQueue(session);
+  const confirmLeave = useConfirmLeaveOnBack();
 
   useGroupNavigation(session, live, { results: true });
 
@@ -304,17 +348,21 @@ function WaitingRoute() {
   const { nudgeMembers, endRound } = api;
 
   return (
-    <Waiting
-      members={progress ?? live.members}
-      myId={session.memberId}
-      isHost={live.hostId ? live.hostId === session.memberId : session.isHost}
-      onNudge={nudgeMembers ? (ids) => nudgeMembers(groupId, ids) : undefined}
-      onEndRound={
-        endRound
-          ? () => void endRound(groupId).then(() => navigate("/no-match", { state: groupOnly(session), replace: true }))
-          : undefined
-      }
-    />
+    <>
+      <Waiting
+        members={progress ?? live.members}
+        notice={queueNotice(queue)}
+        myId={session.memberId}
+        isHost={live.hostId ? live.hostId === session.memberId : session.isHost}
+        onNudge={nudgeMembers ? (ids) => nudgeMembers(groupId, ids) : undefined}
+        onEndRound={
+          endRound
+            ? () => void endRound(groupId).then(() => navigate("/no-match", { state: groupOnly(session), replace: true }))
+            : undefined
+        }
+      />
+      {confirmLeave}
+    </>
   );
 }
 
@@ -322,7 +370,14 @@ function WaitingRoute() {
 function usePlayAgain(session: GroupSession | null) {
   const navigate = useNavigate();
   if (api.canPlayAgain) {
-    return { label: undefined, go: () => session && navigate("/lobby", { state: groupOnly(session), replace: true }) };
+    return {
+      label: undefined,
+      go: () => {
+        if (!session) return;
+        swipeQueueFor(session).reset(); // new round: new swipes
+        navigate("/lobby", { state: groupOnly(session), replace: true });
+      },
+    };
   }
   return {
     label: "Start a new group",
@@ -415,20 +470,19 @@ function NoMatchRoute() {
   );
 }
 
+// A "data router" (not <BrowserRouter>) so screens can ask before the Back button leaves.
+const router = createBrowserRouter([
+  { path: "/", element: <HomeRoute /> },
+  { path: "/create", element: <CreateRoute /> },
+  { path: "/join", element: <JoinRoute /> },
+  { path: "/lobby", element: <LobbyRoute /> },
+  { path: "/swipe", element: <SwipeRoute /> },
+  { path: "/waiting", element: <WaitingRoute /> },
+  { path: "/match", element: <MatchRoute /> },
+  { path: "/no-match", element: <NoMatchRoute /> },
+  { path: "*", element: <Navigate to="/" replace /> },
+]);
+
 export function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomeRoute />} />
-        <Route path="/create" element={<CreateRoute />} />
-        <Route path="/join" element={<JoinRoute />} />
-        <Route path="/lobby" element={<LobbyRoute />} />
-        <Route path="/swipe" element={<SwipeRoute />} />
-        <Route path="/waiting" element={<WaitingRoute />} />
-        <Route path="/match" element={<MatchRoute />} />
-        <Route path="/no-match" element={<NoMatchRoute />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
-  );
+  return <RouterProvider router={router} />;
 }

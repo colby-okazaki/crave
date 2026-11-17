@@ -27,6 +27,10 @@ type SwipeProps = {
   /** Swiped through every card. */
   onFinished: () => void;
   onLeave: () => void;
+  /** Card to start on (after a refresh: the first one you haven't swiped). */
+  initialIndex?: number;
+  /** e.g. "Reconnecting… 2 swipes waiting to send". */
+  notice?: string;
 };
 
 // Keep in sync with --duration-fly in theme.css.
@@ -39,10 +43,23 @@ const FLICK_SPEED = 0.5; // px per ms
 const clamp = (n: number, min: number, max: number) => Math.min(Math.max(n, min), max);
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
-export function Swipe({ load, onRetry, onChangeFilters, onSwipe, onFinished, onLeave }: SwipeProps) {
+export function Swipe({
+  load,
+  onRetry,
+  onChangeFilters,
+  onSwipe,
+  onFinished,
+  onLeave,
+  initialIndex = 0,
+  notice,
+}: SwipeProps) {
   const restaurants = load.status === "ready" ? load.restaurants : [];
   const total = restaurants.length;
   const [index, setIndex] = useState(0);
+  // Once the cards arrive, skip the ones already swiped (e.g. after a refresh).
+  useEffect(() => {
+    if (load.status === "ready") setIndex(initialIndex);
+  }, [load.status]);
   const [intent, setIntent] = useState<Intent>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [detailsFor, setDetailsFor] = useState<Restaurant | null>(null);
@@ -362,12 +379,18 @@ export function Swipe({ load, onRetry, onChangeFilters, onSwipe, onFinished, onL
         </button>
       </div>
       <p
-        className={[styles.hint, intent === "like" && styles.hintLike, intent === "pass" && styles.hintPass]
+        className={[
+          styles.hint,
+          intent === "like" && styles.hintLike,
+          intent === "pass" && styles.hintPass,
+          !intent && notice && styles.hintNotice,
+        ]
           .filter(Boolean)
           .join(" ")}
-        aria-hidden="true"
+        aria-hidden={!notice || Boolean(intent)}
+        role={notice && !intent ? "status" : undefined}
       >
-        {hint}
+        {!intent && notice ? notice : hint}
       </p>
 
       {detailsFor && (
