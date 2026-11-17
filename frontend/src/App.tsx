@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router";
-import { createGroup, joinGroup, watchMembers, type Member } from "./api/groups";
+import {
+  createGroup,
+  endRound,
+  joinGroup,
+  nudgeMembers,
+  watchMembers,
+  watchProgress,
+  type Member,
+  type MemberProgress,
+} from "./api/groups";
 import { Home } from "./screens/Home/Home";
 import { JoinGroup } from "./screens/JoinGroup/JoinGroup";
 import { DEFAULT_FILTERS, Lobby, type LobbyFilters } from "./screens/Lobby/Lobby";
 import { Swipe, type SwipeLoadState } from "./screens/Swipe/Swipe";
+import { Waiting } from "./screens/Waiting/Waiting";
 import { getRestaurants, sendSwipe } from "./api/restaurants";
 import { shareInvite } from "./utils/shareInvite";
 
@@ -35,6 +45,8 @@ type GroupSession = {
   code: string;
   nickname: string;
   isHost: boolean;
+  /** How many cards this round has (set when swiping starts). */
+  total?: number;
 };
 
 /** Go back if we came from inside the app, otherwise go to Home (e.g. someone opened /join directly). */
@@ -169,9 +181,42 @@ function SwipeRoute() {
           })
           .catch((error) => console.warn("Swipe not sent", error));
       }}
-      // TODO: Waiting screen (Figma 7. Waiting).
-      onFinished={() => console.info("Finished swiping")}
+      onFinished={() => {
+        const total = load.status === "ready" ? load.restaurants.length : undefined;
+        navigate("/waiting", { state: { ...session, total }, replace: true });
+      }}
       onLeave={() => navigate("/", { replace: true })}
+    />
+  );
+}
+
+function WaitingRoute() {
+  const session = useLocation().state as GroupSession | null;
+  const [members, setMembers] = useState<MemberProgress[] | null>(null);
+
+  useEffect(() => {
+    if (!session) return;
+    // TODO: replace the mock with a live "progress" event from the backend.
+    const me = { id: session.memberId, nickname: session.nickname };
+    return watchProgress(me, session.isHost, session.total ?? 20, setMembers);
+  }, [session?.groupId, session?.memberId]);
+
+  const everyoneDone = members?.every((m) => m.swiped >= m.total) ?? false;
+  useEffect(() => {
+    // TODO: the backend then sends match_found or no_match → Match / No match screens.
+    if (everyoneDone) console.info("Everyone's done swiping");
+  }, [everyoneDone]);
+
+  if (!session) return <Navigate to="/" replace />;
+
+  return (
+    <Waiting
+      members={members}
+      myId={session.memberId}
+      isHost={session.isHost}
+      onNudge={(ids) => nudgeMembers(session.groupId, ids)}
+      // TODO: then show Match / No match, whichever the backend says.
+      onEndRound={() => void endRound(session.groupId).then(() => console.info("Round ended"))}
     />
   );
 }
@@ -184,6 +229,7 @@ export function App() {
         <Route path="/join" element={<JoinRoute />} />
         <Route path="/lobby" element={<LobbyRoute />} />
         <Route path="/swipe" element={<SwipeRoute />} />
+        <Route path="/waiting" element={<WaitingRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

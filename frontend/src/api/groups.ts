@@ -52,3 +52,46 @@ export function watchMembers(
 
   return () => [first, ...timers].forEach(clearTimeout);
 }
+
+/** One person's progress through the cards (for the Waiting screen). */
+export type MemberProgress = Member & { swiped: number; total: number };
+
+/**
+ * Mock of a live "progress" event (not in docs/API.md yet): calls `onUpdate`
+ * with everyone's progress right away, then again as fake friends swipe.
+ * You're always done (you only get here after your last card).
+ */
+export function watchProgress(
+  me: Member,
+  isHost: boolean,
+  total: number,
+  onUpdate: (members: MemberProgress[]) => void,
+): () => void {
+  let members: MemberProgress[] = [
+    ...(isHost ? [] : [{ id: "m_host", nickname: "Colby", swiped: total, total }]),
+    { ...me, swiped: total, total },
+    { id: "m_mia", nickname: "Mia", swiped: total - 3, total },
+    { id: "m_jordan", nickname: "Jordan", swiped: Math.max(total - 8, 0), total },
+  ];
+  const first = setTimeout(() => onUpdate(members), 300);
+  // Every 1.5s, each friend who isn't done swipes one more card.
+  const tick = setInterval(() => {
+    members = members.map((m) => (m.swiped < m.total ? { ...m, swiped: m.swiped + 1 } : m));
+    onUpdate(members);
+    if (members.every((m) => m.swiped >= m.total)) clearInterval(tick);
+  }, 1500);
+  return () => {
+    clearTimeout(first);
+    clearInterval(tick);
+  };
+}
+
+/** Mock of a "nudge" request (not in docs/API.md yet): pings people who are still swiping. */
+export async function nudgeMembers(_groupId: string, _memberIds: string[]): Promise<void> {
+  await wait(300);
+}
+
+/** Mock of "end round now" (host only; not in docs/API.md yet). */
+export async function endRound(_groupId: string): Promise<void> {
+  await wait(300);
+}

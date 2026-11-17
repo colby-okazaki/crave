@@ -13,6 +13,7 @@
   --color-disabled-text: #737380;
   --color-primary-soft: #ffe8e3; /* selected chip, avatar, Share invite pill */
   --color-like: #29ad6b; /* Like button, LIKE stamp, "Open now" */
+  --color-like-soft: #e0f5e8; /* "Done" pill, Waiting check circle */
   --color-pass: #ed4545; /* Pass button, NOPE stamp */
   --color-progress-track: #ebe5e0;
   --color-photo-from: #ffb873; /* photo placeholder gradient */
@@ -43,6 +44,7 @@
   --font-size-plus: 20px;
   --font-size-card-title: 24px;
   --font-size-sheet-title: 26px;
+  --font-size-headline: 28px; /* "You're done swiping!" */
   --font-size-meta: 15px;
   --font-size-stamp: 34px;
   --letter-spacing-overline: 1.5px;
@@ -100,6 +102,10 @@
   --space-sheet-gap: 12px;
   --space-sheet-top: 110px; /* dimmed swipe screen above the sheet */
   --space-info-icon: 10px;
+  --space-pill-x: 10px;
+  --space-pill-y: 5px;
+  --space-status-row: 12px; /* avatar ↔ name on the Waiting list */
+  --status-circle-size: 88px;
   --sheet-photo-height: 84px;
   --sheet-handle-width: 40px;
   --sheet-handle-height: 5px;
