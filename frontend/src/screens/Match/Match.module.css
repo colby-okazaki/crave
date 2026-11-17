@@ -1,0 +1,185 @@
+/* Coral from edge to edge; the confetti sits on top of it. */
+.page {
+  position: relative;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: var(--color-primary);
+}
+
+.screen {
+  position: relative; /* above the resting confetti */
+}
+
+/* Figma: 24px spacer above the title */
+.topSpace {
+  flex-shrink: 0;
+  height: var(--space-screen-x);
+}
+
+.title {
+  color: var(--color-on-primary);
+  font-size: var(--font-size-match-title);
+  font-weight: var(--font-weight-bold);
+  line-height: normal;
+  text-align: center;
+  animation: pop-in var(--duration-pop) var(--ease-out) both;
+}
+
+.subtitle {
+  color: var(--color-on-primary);
+  font-size: var(--font-size-subtitle);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+}
+
+/* One card, or a swipeable row when there's more than one match. */
+.track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  /* Let the card shadow / radius breathe without clipping. */
+  margin: 0 calc(-1 * var(--space-screen-x));
+  padding: 0 var(--space-screen-x);
+  scroll-padding: 0 var(--space-screen-x);
+  gap: var(--space-screen-x);
+}
+
+.track::-webkit-scrollbar {
+  display: none;
+}
+
+.card {
+  flex: 0 0 100%;
+  overflow: hidden;
+  border-radius: var(--radius-swipe-card);
+  background: var(--color-surface);
+  scroll-snap-align: start;
+  animation: card-in 420ms var(--ease-out) 80ms both;
+}
+
+.photo {
+  height: var(--match-photo-height);
+  background: linear-gradient(150deg, var(--color-photo-from) 0%, var(--color-photo-to) 71.4%);
+}
+
+.photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-filter-label);
+  padding: var(--space-card-info);
+}
+
+.name {
+  font-size: var(--font-size-card-title);
+  font-weight: var(--font-weight-bold);
+  line-height: normal;
+}
+
+.meta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+}
+
+.liked {
+  display: flex;
+  align-items: center;
+  gap: var(--space-filter-label);
+}
+
+.avatars {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: var(--space-filter-label);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+}
+
+.likedCount {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-filter-label);
+  color: var(--color-like);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.likedCount img {
+  display: block;
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-filter-label);
+}
+
+.dot {
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: 50%;
+  background: var(--color-on-primary);
+  opacity: 0.4;
+  transition: opacity var(--duration-press) var(--ease-out);
+}
+
+.dotActive {
+  opacity: 1;
+}
+
+/* White text link at the bottom; tap area still 44px. */
+.newRound {
+  position: relative;
+  align-self: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-on-primary);
+  font-size: var(--font-size-meta);
+  font-weight: var(--font-weight-semibold);
+}
+
+.newRound::after {
+  content: "";
+  position: absolute;
+  inset: calc((100% - var(--tap-target-min)) / 2) -8px;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+}
+
+@media (hover: hover) {
+  .newRound:hover {
+    text-decoration: underline;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title,
+  .card {
+    animation: none;
+  }
+}

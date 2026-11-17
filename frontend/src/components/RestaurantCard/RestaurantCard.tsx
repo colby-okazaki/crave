@@ -15,8 +15,9 @@ export function restaurantMeta(r: Restaurant) {
   return [r.cuisine, priceLabel(r.price), milesAway(r.distanceMeters)].filter(Boolean).join(" · ");
 }
 
-/** ★ 4.6 · 1.2k reviews */
+/** ★ 4.6 · 1.2k reviews (nothing when the rating is unknown) */
 export function Rating({ restaurant: r }: { restaurant: Restaurant }) {
+  if (r.rating == null) return null;
   return (
     <p className={styles.rating}>
       <img src={starIcon} width={16} height={16} alt="" />
@@ -39,7 +40,7 @@ export function RestaurantCard({ restaurant: r, overlay }: RestaurantCardProps) 
     <article className={styles.card} aria-labelledby={`card-${r.id}`}>
       {/* The gradient shows while the photo loads, or if it fails. */}
       <div className={styles.photo}>
-        {!photoFailed && (
+        {r.photoUrl && !photoFailed && (
           <img
             className={styles.img}
             src={r.photoUrl}

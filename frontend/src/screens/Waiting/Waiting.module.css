@@ -1,0 +1,121 @@
+.check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex-shrink: 0;
+  width: var(--status-circle-size);
+  height: var(--status-circle-size);
+  border-radius: 50%;
+  background: var(--color-like-soft);
+  animation: pop-in var(--duration-pop) var(--ease-out);
+}
+
+.check img {
+  display: block;
+}
+
+.title {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-bold);
+  line-height: normal;
+  text-align: center;
+}
+
+.subtitle {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-subtitle);
+  text-align: center;
+}
+
+/* Who's done */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-gap-compact);
+  margin: 0;
+  padding: var(--space-gap);
+  border: var(--border-width-hairline) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-status-row);
+}
+
+.name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--font-size-subtitle);
+  font-weight: var(--font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pill {
+  flex-shrink: 0;
+  padding: var(--space-pill-y) var(--space-pill-x);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-overline);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-press) var(--ease-out),
+    color var(--duration-press) var(--ease-out);
+}
+
+.done {
+  background: var(--color-like-soft);
+  color: var(--color-like);
+}
+
+.swiping {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+/* Host only. Looks like plain text; tap area still 44px. */
+.endRound {
+  position: relative;
+  align-self: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+}
+
+.endRound::after {
+  content: "";
+  position: absolute;
+  inset: calc((100% - var(--tap-target-min)) / 2) -8px;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+@media (hover: hover) {
+  .endRound:hover {
+    text-decoration: underline;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .check {
+    animation: none;
+  }
+  .pill {
+    transition: none;
+  }
+}

@@ -12,6 +12,12 @@
   font-weight: var(--font-weight-bold);
 }
 
+.small {
+  width: var(--avatar-size-small);
+  height: var(--avatar-size-small);
+  font-size: var(--font-size-label);
+}
+
 .popIn {
   animation: pop-in var(--duration-pop) var(--ease-out);
 }

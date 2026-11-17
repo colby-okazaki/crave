@@ -46,3 +46,8 @@ button {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Set by full-color screens (Match) so the page behind and overscroll match. */
+html[data-surface="primary"] body {
+  background: var(--color-primary);
+}

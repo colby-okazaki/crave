@@ -1,0 +1,42 @@
+.confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Figma: 10×6 rounded bits */
+.piece {
+  position: absolute;
+  width: 10px;
+  height: 6px;
+  border-radius: 2px;
+}
+
+.falling {
+  top: -12px;
+  animation-name: fall;
+  animation-timing-function: cubic-bezier(0.25, 0.6, 0.5, 1);
+  animation-fill-mode: both;
+}
+
+@keyframes fall {
+  from {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  to {
+    transform: translate3d(var(--drift), 100vh, 0) rotate(var(--spin));
+    opacity: 0;
+  }
+}
+
+/* Reduced motion: only the resting pieces. */
+@media (prefers-reduced-motion: reduce) {
+  .falling {
+    display: none;
+  }
+}
