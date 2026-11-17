@@ -101,6 +101,9 @@
   --avatar-size-small: 32px;
   --match-photo-height: 200px;
   --dot-size: 8px; /* page dots under 2+ matches */
+  --thumb-size: 56px; /* No match: place thumbnail */
+  --radius-thumb: 12px;
+  --space-pick-text: 2px;
   --action-size: 64px; /* Pass / Like */
   --action-size-small: 48px; /* Details */
   --progress-height: 6px;

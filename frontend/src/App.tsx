@@ -17,7 +17,8 @@ import { DEFAULT_FILTERS, Lobby, type LobbyFilters } from "./screens/Lobby/Lobby
 import { Swipe, type SwipeLoadState } from "./screens/Swipe/Swipe";
 import { Waiting } from "./screens/Waiting/Waiting";
 import { Match, type MatchedPlace } from "./screens/Match/Match";
-import { getRestaurants, sendSwipe } from "./api/restaurants";
+import { NoMatch, type ClosePicksLoad } from "./screens/NoMatch/NoMatch";
+import { castVote, getClosestPicks, getRestaurants, sendSwipe } from "./api/restaurants";
 import { shareInvite } from "./utils/shareInvite";
 
 // Mock location until the location flow is built (see Figma notes for 1. Home).
@@ -51,6 +52,8 @@ type GroupSession = {
   total?: number;
   /** The matched place(s), for /match. */
   places?: MatchedPlace[];
+  /** Set when the place won a quick vote. */
+  vote?: { count: number; total: number };
 };
 
 /** Go back if we came from inside the app, otherwise go to Home (e.g. someone opened /join directly). */
@@ -180,6 +183,8 @@ function SwipeRoute() {
         // Sent in the background so the next card shows right away.
         sendSwipe(session.groupId, restaurant.id, liked)
           .then((result) => {
+            // You were the last one to finish and nobody matched.
+            if (result.noMatch) return navigate("/no-match", { state: session, replace: true });
             if (!result.match) return;
             // Use the full card (photo, price…) when we have it; match_found only sends the basics.
             const restaurants = load.status === "ready" ? load.restaurants : [];
@@ -208,10 +213,14 @@ function WaitingRoute() {
     return watchProgress(me, session.isHost, session.total ?? 20, setMembers);
   }, [session?.groupId, session?.memberId]);
 
+  const navigate = useNavigate();
   const everyoneDone = members?.every((m) => m.swiped >= m.total) ?? false;
   useEffect(() => {
-    // TODO: the backend then sends match_found or no_match → Match / No match screens.
-    if (everyoneDone) console.info("Everyone's done swiping");
+    if (!everyoneDone || !session) return;
+    // TODO: listen for no_match / match_found instead. In the mock, finishing here means no match
+    // (liking Ramen Yoshi would have matched already). Short pause so "Everyone's done!" shows.
+    const timer = setTimeout(() => navigate("/no-match", { state: session, replace: true }), 1200);
+    return () => clearTimeout(timer);
   }, [everyoneDone]);
 
   if (!session) return <Navigate to="/" replace />;
@@ -222,8 +231,8 @@ function WaitingRoute() {
       myId={session.memberId}
       isHost={session.isHost}
       onNudge={(ids) => nudgeMembers(session.groupId, ids)}
-      // TODO: then show Match / No match, whichever the backend says.
-      onEndRound={() => void endRound(session.groupId).then(() => console.info("Round ended"))}
+      // Ending early means there was no match yet, so show the closest picks.
+      onEndRound={() => void endRound(session.groupId).then(() => navigate("/no-match", { state: session, replace: true }))}
     />
   );
 }
@@ -236,14 +245,58 @@ function MatchRoute() {
   // TODO: use the real member list from the socket `state` event.
   const members = mockGroup({ id: session.memberId, nickname: session.nickname }, session.isHost);
   // Back to the Lobby with the same group, minus this round's details.
-  const { places, total: _total, ...group } = session;
+  const { places, total: _total, vote: _vote, ...group } = session;
 
   return (
     <Match
       places={places}
       members={members}
+      vote={session.vote}
       // TODO: tell the backend a new round started (there's no endpoint for this yet).
       onNewRound={() => navigate("/lobby", { state: group, replace: true })}
+    />
+  );
+}
+
+function NoMatchRoute() {
+  const navigate = useNavigate();
+  const session = useLocation().state as GroupSession | null;
+  const [load, setLoad] = useState<ClosePicksLoad>({ status: "loading" });
+  // TODO: use the real member list from the socket `state` event.
+  const members = session ? mockGroup({ id: session.memberId, nickname: session.nickname }, session.isHost) : [];
+
+  const fetchPicks = useCallback(() => {
+    if (!session) return;
+    setLoad({ status: "loading" });
+    getClosestPicks(session.groupId, members.map((m) => m.id), session.memberId)
+      .then((picks) => setLoad({ status: "ready", picks }))
+      .catch(() => setLoad({ status: "error" }));
+  }, [session?.groupId]);
+
+  useEffect(fetchPicks, [fetchPicks]);
+
+  if (!session) return <Navigate to="/" replace />;
+  const { places: _places, total: _total, vote: _vote, ...group } = session;
+
+  return (
+    <NoMatch
+      load={load}
+      memberCount={members.length}
+      onRetry={fetchPicks}
+      onVote={(restaurantId, onVotesIn) => {
+        const options = load.status === "ready" ? load.picks.map((p) => p.restaurant.id) : [];
+        // TODO: real vote endpoint + live "votes in" / result events.
+        return castVote(session.groupId, restaurantId, options, members.length, onVotesIn);
+      }}
+      onVoteResult={(winner, result) =>
+        navigate("/match", {
+          state: { ...group, places: [winner], vote: { count: result.votes[winner.id] ?? 0, total: members.length } },
+          replace: true,
+        })
+      }
+      // TODO: the backend can't restart a group's stack yet ("widen filters" = new group for now).
+      onChangeFilters={() => navigate("/lobby", { state: group, replace: true })}
+      onHome={() => navigate("/", { replace: true })}
     />
   );
 }
@@ -258,6 +311,7 @@ export function App() {
         <Route path="/swipe" element={<SwipeRoute />} />
         <Route path="/waiting" element={<WaitingRoute />} />
         <Route path="/match" element={<MatchRoute />} />
+        <Route path="/no-match" element={<NoMatchRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -1,0 +1,160 @@
+/* Figma: 24px spacer above the title */
+.topSpace {
+  flex-shrink: 0;
+  height: var(--space-screen-x);
+}
+
+.title {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+  line-height: normal;
+}
+
+.subtitle {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-subtitle);
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-gap);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-meta);
+}
+
+.picks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-gap);
+}
+
+.pick {
+  display: flex;
+  align-items: center;
+  gap: var(--space-status-row);
+  width: 100%;
+  padding: var(--space-gap);
+  border: var(--border-width-hairline) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+  /* Draw the thicker selected border inside, so the card doesn't grow. */
+  box-shadow: inset 0 0 0 0 transparent;
+  transition:
+    box-shadow var(--duration-press) var(--ease-out),
+    border-color var(--duration-press) var(--ease-out),
+    transform var(--duration-press) var(--ease-out);
+}
+
+.choice:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.choice:disabled {
+  cursor: default;
+}
+
+.choice:disabled:not(.selected) {
+  opacity: 0.5;
+}
+
+.selected {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+.thumb {
+  flex-shrink: 0;
+  width: var(--thumb-size);
+  height: var(--thumb-size);
+  overflow: hidden;
+  border-radius: var(--radius-thumb);
+  background: linear-gradient(135deg, var(--color-photo-from) 0%, var(--color-photo-to) 71.4%);
+}
+
+.thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: var(--space-pick-text);
+  min-width: 0;
+}
+
+.name,
+.meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name {
+  font-size: var(--font-size-subtitle);
+  font-weight: var(--font-weight-semibold);
+}
+
+.meta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.pill {
+  flex-shrink: 0;
+  padding: var(--space-pill-y) var(--space-pill-x);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--font-size-overline);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.error {
+  color: var(--color-error);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Muted text link at the bottom; tap area still 44px. */
+.home {
+  position: relative;
+  align-self: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-meta);
+  font-weight: var(--font-weight-semibold);
+}
+
+.home::after {
+  content: "";
+  position: absolute;
+  inset: calc((100% - var(--tap-target-min)) / 2) -8px;
+}
+
+@media (hover: hover) {
+  .choice:hover:not(:disabled):not(.selected) {
+    border-color: var(--color-text-muted);
+  }
+  .home:hover {
+    text-decoration: underline;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pick {
+    transition: none;
+  }
+  .choice:active:not(:disabled) {
+    transform: none;
+  }
+}

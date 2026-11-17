@@ -27,7 +27,7 @@ export type Restaurant = {
   menuUrl?: string;
 };
 
-export type SwipeResult = { ok: true; match: { restaurantId: string } | null };
+export type SwipeResult = { ok: true; match: { restaurantId: string } | null; noMatch?: boolean };
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -91,11 +91,73 @@ export async function getRestaurants(_groupId: string): Promise<Restaurant[]> {
   });
 }
 
+// The mock remembers your likes so "closest picks" can count them.
+const myLikes = new Set<string>();
+// What the fake friends liked (Ramen Yoshi, r_014, is liked by everyone: the mock match).
+const FRIEND_LIKES: Record<string, string[]> = {
+  m_host: ["r_002", "r_005", "r_010", "r_014", "r_016"],
+  m_mia: ["r_002", "r_006", "r_010", "r_014", "r_018"],
+  m_jordan: ["r_002", "r_003", "r_010", "r_014"],
+};
+
 /** In the mock, everyone else already liked this place, so liking it makes a match. */
 export const MOCK_MATCH_ID = "r_014"; // Ramen Yoshi
 
 /** Mock of POST /groups/:id/swipes. Liking Ramen Yoshi (card 14) makes a match; pass it to reach Waiting. */
 export async function sendSwipe(_groupId: string, restaurantId: string, liked: boolean): Promise<SwipeResult> {
   await wait(150);
+  if (liked) myLikes.add(restaurantId);
+  else myLikes.delete(restaurantId);
   return { ok: true, match: liked && restaurantId === MOCK_MATCH_ID ? { restaurantId } : null };
+}
+
+/** A place that came close, and how many people liked it. */
+export type ClosePick = { restaurant: Restaurant; likes: number };
+
+/**
+ * Mock of "closest picks" for the No match screen (not in docs/API.md yet):
+ * the top 3 places by likes (ties: closest first). Places nobody liked are left out.
+ */
+export async function getClosestPicks(groupId: string, memberIds: string[], myId: string): Promise<ClosePick[]> {
+  const restaurants = await getRestaurants(groupId);
+  const likedBy = (id: string, r: Restaurant) => (id === myId ? myLikes.has(r.id) : FRIEND_LIKES[id]?.includes(r.id));
+  return restaurants
+    .map((restaurant) => ({ restaurant, likes: memberIds.filter((id) => likedBy(id, restaurant)).length }))
+    .filter((p) => p.likes > 0)
+    .sort((a, b) => b.likes - a.likes || a.restaurant.distanceMeters - b.restaurant.distanceMeters)
+    .slice(0, 3);
+}
+
+export type VoteResult = { winnerId: string; votes: Record<string, number> };
+
+/**
+ * Mock of a quick vote (not in docs/API.md yet). Your vote counts first; the fake
+ * friends vote a second apart. Most votes wins; a tie goes to the place higher in the list.
+ */
+export function castVote(
+  _groupId: string,
+  myPick: string,
+  options: string[],
+  memberCount: number,
+  onVotesIn: (count: number) => void,
+): Promise<VoteResult> {
+  return new Promise((resolve) => {
+    const votes: Record<string, number> = { [myPick]: 1 };
+    let count = 1;
+    onVotesIn(count);
+    const friends = memberCount - 1;
+    if (friends <= 0) return resolve({ winnerId: myPick, votes });
+    const timer = setInterval(() => {
+      // Friends split between the top pick and yours.
+      const pick = count % 2 === 1 ? options[0] : myPick;
+      votes[pick] = (votes[pick] ?? 0) + 1;
+      count += 1;
+      onVotesIn(count);
+      if (count >= memberCount) {
+        clearInterval(timer);
+        const winnerId = options.reduce((best, id) => ((votes[id] ?? 0) > (votes[best] ?? 0) ? id : best), options[0]);
+        setTimeout(() => resolve({ winnerId, votes }), 500);
+      }
+    }, 1000);
+  });
 }

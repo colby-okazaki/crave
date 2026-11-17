@@ -21,10 +21,12 @@ type MatchProps = {
   places: MatchedPlace[];
   /** Everyone in the group (they all liked it). */
   members: Member[];
+  /** Set when the place won a quick vote (No match screen) instead of everyone liking it. */
+  vote?: { count: number; total: number };
   onNewRound: () => void;
 };
 
-export function Match({ places, members, onNewRound }: MatchProps) {
+export function Match({ places, members, vote, onNewRound }: MatchProps) {
   const [active, setActive] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
   const place = places[Math.min(active, places.length - 1)];
@@ -57,9 +59,13 @@ export function Match({ places, members, onNewRound }: MatchProps) {
       <Confetti />
       <Screen className={styles.screen}>
         <div className={styles.topSpace} />
-        <h1 className={styles.title}>It's a match!</h1>
+        <h1 className={styles.title}>{vote ? "It's decided!" : "It's a match!"}</h1>
         <p className={styles.subtitle}>
-          {many ? `Everyone in your group liked ${places.length} places` : "Everyone in your group liked"}
+          {vote
+            ? "Your group voted for"
+            : many
+              ? `Everyone in your group liked ${places.length} places`
+              : "Everyone in your group liked"}
         </p>
 
         <div
@@ -73,6 +79,7 @@ export function Match({ places, members, onNewRound }: MatchProps) {
               key={p.id}
               place={p}
               members={members}
+              vote={vote}
               label={many ? `${i + 1} of ${places.length}` : undefined}
             />
           ))}
@@ -101,7 +108,17 @@ export function Match({ places, members, onNewRound }: MatchProps) {
   );
 }
 
-function MatchCard({ place: p, members, label }: { place: MatchedPlace; members: Member[]; label?: string }) {
+function MatchCard({
+  place: p,
+  members,
+  vote,
+  label,
+}: {
+  place: MatchedPlace;
+  members: Member[];
+  vote?: { count: number; total: number };
+  label?: string;
+}) {
   const [photoFailed, setPhotoFailed] = useState(false);
   const meta = [
     p.cuisine,
@@ -121,7 +138,8 @@ function MatchCard({ place: p, members, label }: { place: MatchedPlace; members:
         <h2 className={styles.name}>{p.name}</h2>
         {meta && <p className={styles.meta}>{meta}</p>}
         <div className={styles.liked}>
-          <ul className={styles.avatars} aria-label="Liked by">
+          {/* Everyone liked it, so show the whole group (a vote doesn't say who picked what). */}
+          <ul className={styles.avatars} aria-label={vote ? "Your group" : "Liked by"}>
             {members.map((m) => (
               <li key={m.id}>
                 <Avatar name={m.nickname} size="small" />
@@ -130,7 +148,7 @@ function MatchCard({ place: p, members, label }: { place: MatchedPlace; members:
           </ul>
           <p className={styles.likedCount}>
             <img src={heartIcon} width={16} height={16} alt="" />
-            {members.length} of {members.length} liked
+            {vote ? `${vote.count} of ${vote.total} votes` : `${members.length} of ${members.length} liked`}
           </p>
         </div>
       </div>
