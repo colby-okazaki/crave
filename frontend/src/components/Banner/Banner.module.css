@@ -1,0 +1,35 @@
+/* Floats over the top of the screen, below the notch, without moving the layout. */
+.slot {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 10;
+  width: min(100% - 2 * var(--space-screen-x), var(--screen-max-width) - 2 * var(--space-screen-x));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.banner {
+  padding: 12px 16px;
+  border-radius: var(--radius-button);
+  background: var(--color-text);
+  box-shadow: var(--shadow-popover);
+  color: var(--color-surface);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+  animation: slide-in var(--duration-pop) var(--ease-out);
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    animation: none;
+  }
+}

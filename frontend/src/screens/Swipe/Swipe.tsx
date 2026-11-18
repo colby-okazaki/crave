@@ -21,8 +21,8 @@ type Intent = "like" | "pass" | null;
 type SwipeProps = {
   load: SwipeLoadState;
   onRetry: () => void;
-  /** Nothing matched the filters: go back and change them. */
-  onChangeFilters: () => void;
+  /** Nothing matched the filters: start over with new ones (host only; leave out for guests). */
+  onChangeFilters?: () => void;
   onSwipe: (restaurant: Restaurant, liked: boolean) => void;
   /** Swiped through every card. */
   onFinished: () => void;
@@ -289,10 +289,16 @@ export function Swipe({
         {load.status === "ready" && total === 0 && (
           <div className={styles.notice}>
             <p className={styles.noticeTitle}>Nothing matched your filters</p>
-            <p className={styles.message}>Try a bigger distance or more cuisines.</p>
-            <Button variant="secondary" onClick={onChangeFilters}>
-              Change filters
-            </Button>
+            {onChangeFilters ? (
+              <>
+                <p className={styles.message}>Try a bigger distance or more cuisines.</p>
+                <Button variant="secondary" onClick={onChangeFilters}>
+                  Change filters
+                </Button>
+              </>
+            ) : (
+              <p className={styles.message}>Ask the host to try a bigger distance or more cuisines.</p>
+            )}
           </div>
         )}
 

@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createBrowserRouter, Navigate, RouterProvider, useBlocker, useLocation, useNavigate, useSearchParams } from "react-router";
 import { api } from "./api";
 import { closeLive, useLive } from "./api/live";
-import { queueNotice, swipeQueueFor, useSwipeQueue } from "./api/swipeQueue";
+import { closeSwipeQueue, queueNotice, swipeQueueFor, useSwipeQueue } from "./api/swipeQueue";
+import { Banner } from "./components/Banner/Banner";
 import { ConfirmDialog } from "./components/ConfirmDialog/ConfirmDialog";
-import { ApiError, type GroupRef, type LiveSnapshot, type MemberProgress, type Restaurant } from "./api/types";
+import { ApiError, type ClosePick, type GroupRef, type LiveSnapshot } from "./api/types";
 import { CreateGroup } from "./screens/CreateGroup/CreateGroup";
 import { Home } from "./screens/Home/Home";
 import { JoinGroup } from "./screens/JoinGroup/JoinGroup";
@@ -28,9 +29,16 @@ type GroupSession = GroupRef & {
   vote?: { count: number; total: number };
 };
 
+const GROUP_ENDED = "That group has ended. Start a new one, or join another.";
+
 /** The group without this round's details (for going back to the Lobby or on to results). */
 function groupOnly({ places: _p, total: _t, vote: _v, ...group }: GroupSession): GroupSession {
   return group;
+}
+
+/** Are you the host? The server says so live (it passes to someone else if the host leaves). */
+function amHost(session: GroupSession, live: LiveSnapshot) {
+  return live.hostId ? live.hostId === session.memberId : session.isHost;
 }
 
 /** Turns an error from the server into words people can act on. */
@@ -43,11 +51,28 @@ function errorMessage(error: unknown): string {
       return "Too many tries. Wait a minute and try again.";
     case "SERVER_BUSY":
       return "Too many groups are open right now. Try again in a minute.";
+    case "NOT_HOST":
+      return "Only the host can do that.";
+    case "ROUND_STARTED":
+      return "The round already started, so the filters are locked.";
+    case "NO_VOTE_OPEN":
+      return "The vote has closed.";
+    case "GROUP_NOT_FOUND":
+      return GROUP_ENDED;
     case "INVALID_INPUT":
+    case "NUDGE_COOLDOWN":
       return error.message;
     default:
       return "Something went wrong. Try again.";
   }
+}
+
+/** Leave for good: tell the server (so you stop counting for matches), drop unsent swipes, hang up. */
+function leaveGroup(session: GroupRef) {
+  // Best effort: if it doesn't arrive, the group still closes on its own after a while.
+  api.leaveGroup(session.groupId, session.memberId).catch(() => {});
+  closeSwipeQueue(session);
+  closeLive();
 }
 
 /** Go back if we came from inside the app, otherwise go to Home (e.g. someone opened /join directly). */
@@ -62,31 +87,68 @@ function useGoBack() {
 
 /**
  * Moves you along when the server says so: the host started (guests go to Swipe), there's a
- * match, nobody matched, or the group is gone (back to Home with a note).
+ * match, nobody matched, the host started a new round (back to the Lobby), or the group is
+ * gone (back to Home with a note).
  */
-function useGroupNavigation(session: GroupSession | null, live: LiveSnapshot, follow: { started?: boolean; results?: boolean }) {
+function useGroupNavigation(
+  session: GroupSession | null,
+  live: LiveSnapshot,
+  follow: { started?: boolean; match?: boolean; noMatch?: boolean; newRound?: boolean; lobby?: boolean },
+) {
   const navigate = useNavigate();
+  const round = useRef(live.round);
+
+  // The host started a new round: everyone's swipes from last round are gone.
+  useEffect(() => {
+    if (!session || live.round === round.current) return;
+    round.current = live.round;
+    swipeQueueFor(session).reset();
+    if (follow.newRound) navigate("/lobby", { state: groupOnly(session), replace: true });
+  }, [live.round]);
+
+  // A phone that was offline when the new round started finds out from `state` on reconnect:
+  // back in the lobby with no result. (Not on Swipe: right after the host taps Start, Swipe
+  // can open before `round_started` arrives.)
+  const backInLobby = live.members !== null && !live.started && !live.match && !live.noMatch;
+
   useEffect(() => {
     if (!session) return;
     const group = groupOnly(session);
     if (live.ended) {
       closeLive();
-      navigate("/", { replace: true, state: { notice: "That group has ended. Start a new one, or join another." } });
-    } else if (follow.results && live.match) {
+      navigate("/", { replace: true, state: { notice: GROUP_ENDED } });
+    } else if (follow.match && live.match) {
       navigate("/match", { state: { ...group, places: [live.match] }, replace: true });
-    } else if (follow.results && live.noMatch) {
+    } else if (follow.noMatch && live.noMatch) {
       navigate("/no-match", { state: group, replace: true });
     } else if (follow.started && live.started) {
       navigate("/swipe", { state: group, replace: true });
+    } else if (follow.lobby && backInLobby) {
+      swipeQueueFor(session).reset();
+      navigate("/lobby", { state: group, replace: true });
     }
-  }, [live.ended, live.match, live.noMatch, live.started]);
+  }, [live.ended, live.match, live.noMatch, live.started, backInLobby]);
+}
+
+/** "Mia nudged you", for a few seconds after someone nudges you (plus a buzz on Android). */
+function useNudgeMessage(live: LiveSnapshot) {
+  const [message, setMessage] = useState<string | null>(null);
+  const at = live.nudge?.at;
+  useEffect(() => {
+    if (!live.nudge || Date.now() - live.nudge.at > 10_000) return;
+    setMessage(`${live.nudge.from.nickname} nudged you. Keep swiping!`);
+    if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(80);
+    const timer = setTimeout(() => setMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [at]);
+  return message;
 }
 
 /**
  * The browser's Back button (or the iPhone swipe-back gesture) would quietly leave the group,
  * so ask first, like the Leave button does. Render the returned dialog next to the screen.
  */
-function useConfirmLeaveOnBack() {
+function useConfirmLeaveOnBack(session: GroupSession | null) {
   const blocker = useBlocker(({ historyAction }) => historyAction === "POP");
   return (
     <ConfirmDialog
@@ -94,7 +156,7 @@ function useConfirmLeaveOnBack() {
       title="Leave group?"
       confirmLabel="Leave"
       onConfirm={() => {
-        closeLive();
+        if (session) leaveGroup(session);
         blocker.proceed?.();
       }}
       onCancel={() => blocker.reset?.()}
@@ -102,6 +164,23 @@ function useConfirmLeaveOnBack() {
       You can rejoin later with the code.
     </ConfirmDialog>
   );
+}
+
+/**
+ * Host only: same group, new round. Everyone (you too) goes back to the Lobby when `round_reset`
+ * arrives (or, if the connection dropped, when `state` says so on reconnect). Going there before
+ * the event would show last round's "started" and bounce you straight to Swipe.
+ */
+function useNewRound(session: GroupSession | null, live: LiveSnapshot) {
+  const [error, setError] = useState("");
+  if (!session || !amHost(session, live)) return { start: undefined, error };
+  return {
+    error,
+    start: () => {
+      setError("");
+      api.newRound(session.groupId, session.memberId).catch((e) => setError(errorMessage(e)));
+    },
+  };
 }
 
 function HomeRoute() {
@@ -178,14 +257,14 @@ function LobbyRoute() {
   const navigate = useNavigate();
   const session = useLocation().state as GroupSession | null;
   const live = useLive(session);
-  const isHost = session ? (live.hostId ? live.hostId === session.memberId : session.isHost) : false;
+  const isHost = session ? amHost(session, live) : false;
   // The host's own picks; until they touch anything, show what the server has.
   const [picked, setPicked] = useState<LobbyFilters | null>(null);
   const [error, setError] = useState("");
   const pending = useRef<{ timer: number; filters: LobbyFilters } | null>(null);
 
   useGroupNavigation(session, live, { started: true });
-  const confirmLeave = useConfirmLeaveOnBack();
+  const confirmLeave = useConfirmLeaveOnBack(session);
 
   const sendFilters = useCallback(
     (filters: LobbyFilters) =>
@@ -216,7 +295,9 @@ function LobbyRoute() {
             filters: next,
             timer: window.setTimeout(() => {
               pending.current = null;
-              sendFilters(next).catch(() => setError("Couldn't save the filters. Check your connection."));
+              sendFilters(next).catch((e) =>
+                setError(e instanceof ApiError && e.status !== 0 ? errorMessage(e) : "Couldn't save the filters. Check your connection."),
+              );
             }, 300),
           };
         }}
@@ -237,9 +318,8 @@ function LobbyRoute() {
             setError(errorMessage(e));
           }
         }}
-        // TODO: tell the backend we left (no endpoint yet); until then a leaver still counts for matches.
         onLeave={() => {
-          closeLive();
+          leaveGroup(session);
           navigate("/", { replace: true });
         }}
       />
@@ -254,9 +334,11 @@ function SwipeRoute() {
   const live = useLive(session);
   const [load, setLoad] = useState<SwipeLoadState>({ status: "loading" });
   const queue = useSwipeQueue(session);
-  const confirmLeave = useConfirmLeaveOnBack();
+  const confirmLeave = useConfirmLeaveOnBack(session);
+  const nudge = useNudgeMessage(live);
+  const newRound = useNewRound(session, live);
 
-  useGroupNavigation(session, live, { results: true });
+  useGroupNavigation(session, live, { match: true, noMatch: true, newRound: true });
 
   // A swipe's answer can say match / no match before the live update arrives.
   useEffect(() => {
@@ -264,7 +346,7 @@ function SwipeRoute() {
     const group = groupOnly(session);
     if (queue.ended) {
       closeLive();
-      navigate("/", { replace: true, state: { notice: "That group has ended. Start a new one, or join another." } });
+      navigate("/", { replace: true, state: { notice: GROUP_ENDED } });
     } else if (queue.match) {
       // Use the full card (photo, price…) when we have it; the swipe answer only has the id.
       const restaurants = load.status === "ready" ? load.restaurants : [];
@@ -295,12 +377,14 @@ function SwipeRoute() {
 
   return (
     <>
+      <Banner message={nudge ?? newRound.error} />
       <Swipe
         load={load}
         initialIndex={firstUnswiped === -1 ? restaurants.length : firstUnswiped}
         notice={queueNotice(queue)}
         onRetry={fetchRestaurants}
-        onChangeFilters={() => navigate("/lobby", { state: group, replace: true })}
+        // Nothing matched: the cards are locked in for this round, so the host starts a new one.
+        onChangeFilters={newRound.start}
         // Queued and sent in the background, so the next card shows right away. A swipe that
         // can't be sent (bad connection) waits and retries; the screen says so.
         onSwipe={(restaurant, liked) => swipeQueueFor(session).add(restaurant.id, liked)}
@@ -309,7 +393,7 @@ function SwipeRoute() {
           navigate("/waiting", { state: { ...group, total }, replace: true });
         }}
         onLeave={() => {
-          closeLive();
+          leaveGroup(session);
           navigate("/", { replace: true });
         }}
       />
@@ -322,77 +406,55 @@ function WaitingRoute() {
   const navigate = useNavigate();
   const session = useLocation().state as GroupSession | null;
   const live = useLive(session);
-  // Per-person progress only exists in fake-data mode for now.
-  const [progress, setProgress] = useState<MemberProgress[] | null>(null);
   const queue = useSwipeQueue(session);
-  const confirmLeave = useConfirmLeaveOnBack();
+  const confirmLeave = useConfirmLeaveOnBack(session);
+  const [error, setError] = useState("");
 
-  useGroupNavigation(session, live, { results: true });
-
-  useEffect(() => {
-    if (!session || !api.watchProgress) return;
-    const me = { id: session.memberId, nickname: session.nickname };
-    return api.watchProgress(me, session.isHost, session.total ?? 20, setProgress);
-  }, [session?.groupId, session?.memberId]);
-
-  // Fake-data mode: once the fake friends finish, there's no match (liking Ramen Yoshi would have matched).
-  const everyoneDone = progress?.every((m) => m.swiped >= m.total) ?? false;
-  useEffect(() => {
-    if (!everyoneDone || !session) return;
-    const timer = setTimeout(() => navigate("/no-match", { state: groupOnly(session), replace: true }), 1200);
-    return () => clearTimeout(timer);
-  }, [everyoneDone]);
+  useGroupNavigation(session, live, { match: true, noMatch: true, newRound: true, lobby: true });
 
   if (!session) return <Navigate to="/" replace />;
-  const { groupId } = session;
-  const { nudgeMembers, endRound } = api;
+  const { groupId, memberId } = session;
+
+  // Everyone's progress. Someone with no swipes yet has no entry, so count them at 0.
+  const total = Math.max(session.total ?? 0, ...Object.values(live.progress).map((p) => p.total));
+  const members =
+    live.members?.map((m) => ({ ...m, ...(live.progress[m.id] ?? (total ? { swiped: 0, total } : {})) })) ?? null;
 
   return (
     <>
       <Waiting
-        members={progress ?? live.members}
-        notice={queueNotice(queue)}
-        myId={session.memberId}
-        isHost={live.hostId ? live.hostId === session.memberId : session.isHost}
-        onNudge={nudgeMembers ? (ids) => nudgeMembers(groupId, ids) : undefined}
-        onEndRound={
-          endRound
-            ? () => void endRound(groupId).then(() => navigate("/no-match", { state: groupOnly(session), replace: true }))
-            : undefined
+        members={members}
+        notice={error || queueNotice(queue)}
+        myId={memberId}
+        isHost={amHost(session, live)}
+        onNudge={(ids) =>
+          api.nudge(groupId, memberId, ids).catch((e) => {
+            // Already nudged them in the last minute: the button's countdown is right as it is.
+            if (e instanceof ApiError && e.code === "NUDGE_COOLDOWN") return;
+            throw e;
+          })
         }
+        onEndRound={() => {
+          setError("");
+          api
+            .endRound(groupId, memberId)
+            // The live update says match or no match; go now in case it's slow.
+            .then(() => !live.match && navigate("/no-match", { state: groupOnly(session), replace: true }))
+            .catch((e) => setError(errorMessage(e)));
+        }}
       />
       {confirmLeave}
     </>
   );
 }
 
-/** "Start a new round" in the same group, or a new group when the server can't replay a round. */
-function usePlayAgain(session: GroupSession | null) {
-  const navigate = useNavigate();
-  if (api.canPlayAgain) {
-    return {
-      label: undefined,
-      go: () => {
-        if (!session) return;
-        swipeQueueFor(session).reset(); // new round: new swipes
-        navigate("/lobby", { state: groupOnly(session), replace: true });
-      },
-    };
-  }
-  return {
-    label: "Start a new group",
-    go: () => {
-      closeLive();
-      navigate("/create", { replace: true });
-    },
-  };
-}
-
 function MatchRoute() {
   const session = useLocation().state as GroupSession | null;
   const live = useLive(session);
-  const playAgain = usePlayAgain(session);
+  const newRound = useNewRound(session, live);
   const [places, setPlaces] = useState<MatchedPlace[]>(session?.places ?? []);
+
+  useGroupNavigation(session, live, { newRound: true, lobby: true });
 
   // match_found only sends name, address, hours and location: fill in the photo, price… from the stack.
   useEffect(() => {
@@ -411,8 +473,8 @@ function MatchRoute() {
       places={places}
       members={live.members ?? [me]}
       vote={session.vote}
-      newRoundLabel={playAgain.label}
-      onNewRound={playAgain.go}
+      onNewRound={newRound.start}
+      error={newRound.error}
     />
   );
 }
@@ -421,49 +483,60 @@ function NoMatchRoute() {
   const navigate = useNavigate();
   const session = useLocation().state as GroupSession | null;
   const live = useLive(session);
-  const playAgain = usePlayAgain(session);
-  // Closest picks only exist in fake-data mode for now; without them the list is hidden.
-  const [load, setLoad] = useState<ClosePicksLoad | undefined>(api.getClosestPicks ? { status: "loading" } : undefined);
+  const newRound = useNewRound(session, live);
+  const [load, setLoad] = useState<ClosePicksLoad>({ status: "loading" });
   const members = live.members ?? (session ? [{ id: session.memberId, nickname: session.nickname }] : []);
 
+  useGroupNavigation(session, live, { newRound: true, lobby: true });
+
+  // The vote's winner (or a late match) arrives as match_found. Everyone goes, voted or not.
+  useEffect(() => {
+    if (!session || !live.match) return;
+    const result = live.voteResult;
+    const vote = result
+      ? { count: result.votes[result.winnerId] ?? 0, total: Object.values(result.votes).reduce((a, b) => a + b, 0) }
+      : undefined;
+    navigate("/match", { state: { ...groupOnly(session), places: [live.match], vote }, replace: true });
+  }, [live.match]);
+
+  // The closest picks, with the full cards (photo, price…) from this round's stack.
   const fetchPicks = useCallback(() => {
-    if (!session || !api.getClosestPicks) return;
+    if (!session) return;
     setLoad({ status: "loading" });
-    api
-      .getClosestPicks(session.groupId, members.map((m) => m.id), session.memberId)
-      .then((picks) => setLoad({ status: "ready", picks }))
+    Promise.all([api.getResults(session.groupId, session.memberId), api.getRestaurants(session.groupId, session.memberId)])
+      .then(([results, stack]) => {
+        const picks = results.flatMap(({ restaurantId, likes }): ClosePick[] => {
+          const restaurant = stack.find((r) => r.id === restaurantId);
+          return restaurant ? [{ restaurant, likes }] : [];
+        });
+        setLoad({ status: "ready", picks });
+      })
       .catch(() => setLoad({ status: "error" }));
-  }, [session?.groupId, members.length]);
+  }, [session?.groupId, session?.memberId]);
 
   useEffect(fetchPicks, [fetchPicks]);
 
   if (!session) return <Navigate to="/" replace />;
-  const group = groupOnly(session);
-  const castVote = api.castVote;
 
   return (
     <NoMatch
       load={load}
-      memberCount={members.length}
+      memberCount={live.vote?.total ?? members.length}
+      votesIn={live.vote?.votesIn}
       onRetry={fetchPicks}
-      onVote={
-        castVote
-          ? (restaurantId, onVotesIn) => {
-              const options = load?.status === "ready" ? load.picks.map((p) => p.restaurant.id) : [];
-              return castVote(session.groupId, restaurantId, options, members.length, onVotesIn);
-            }
-          : undefined
-      }
-      onVoteResult={(winner: Restaurant, result) =>
-        navigate("/match", {
-          state: { ...group, places: [winner], vote: { count: result.votes[winner.id] ?? 0, total: members.length } },
-          replace: true,
-        })
-      }
-      changeFiltersLabel={playAgain.label}
-      onChangeFilters={playAgain.go}
+      onVote={async (restaurantId) => {
+        try {
+          await api.vote(session.groupId, session.memberId, restaurantId);
+        } catch (e) {
+          throw new Error(
+            e instanceof ApiError && e.code === "NO_VOTE_OPEN" ? errorMessage(e) : "Your vote didn't go through. Try again.",
+          );
+        }
+      }}
+      onChangeFilters={newRound.start}
+      error={newRound.error}
       onHome={() => {
-        closeLive();
+        leaveGroup(session);
         navigate("/", { replace: true });
       }}
     />

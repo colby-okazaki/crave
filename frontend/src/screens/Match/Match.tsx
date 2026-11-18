@@ -22,12 +22,13 @@ type MatchProps = {
   members: Member[];
   /** Set when the place won a quick vote (No match screen) instead of everyone liking it. */
   vote?: { count: number; total: number };
-  onNewRound: () => void;
-  /** "Start a new round" (same group) or "Start a new group" when the server can't replay a round. */
-  newRoundLabel?: string;
+  /** Host only: play again in the same group. Leave out for guests (they wait for the host). */
+  onNewRound?: () => void;
+  /** e.g. the new round couldn't start. */
+  error?: string;
 };
 
-export function Match({ places, members, vote, onNewRound, newRoundLabel = "Start a new round" }: MatchProps) {
+export function Match({ places, members, vote, onNewRound, error }: MatchProps) {
   const [active, setActive] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
   const place = places[Math.min(active, places.length - 1)];
@@ -101,9 +102,18 @@ export function Match({ places, members, vote, onNewRound, newRoundLabel = "Star
         <ButtonLink variant="secondary" href={menuUrl(place)} target="_blank" rel="noopener noreferrer">
           View menu
         </ButtonLink>
-        <button type="button" className={styles.newRound} onClick={onNewRound}>
-          {newRoundLabel}
-        </button>
+        {error && (
+          <p className={styles.note} role="alert">
+            {error}
+          </p>
+        )}
+        {onNewRound ? (
+          <button type="button" className={styles.newRound} onClick={onNewRound}>
+            Start a new round
+          </button>
+        ) : (
+          <p className={styles.note}>The host can start a new round.</p>
+        )}
       </Screen>
     </div>
   );

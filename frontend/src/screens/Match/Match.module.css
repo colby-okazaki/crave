@@ -157,6 +157,14 @@
   inset: calc((100% - var(--tap-target-min)) / 2) -8px;
 }
 
+/* Guests' "The host can start a new round", or an error, on the coral page. */
+.note {
+  align-self: center;
+  color: var(--color-on-primary);
+  font-size: var(--font-size-meta);
+  text-align: center;
+}
+
 @keyframes pop-in {
   from {
     opacity: 0;

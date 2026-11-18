@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "../../components/Button/Button";
 import { Screen, Spacer } from "../../components/Screen/Screen";
-import type { ClosePick, Restaurant, VoteResult } from "../../api/types";
+import type { ClosePick } from "../../api/types";
 import { milesAway, priceLabel } from "../../utils/format";
 import styles from "./NoMatch.module.css";
 
@@ -11,56 +11,55 @@ export type ClosePicksLoad =
   | { status: "ready"; picks: ClosePick[] };
 
 type NoMatchProps = {
-  /** Leave out when the server can't tell us the closest picks (the list is hidden). */
-  load?: ClosePicksLoad;
+  load: ClosePicksLoad;
   /** People in the group (for "2 of 3 liked" and "Votes in: 1 of 3"). */
   memberCount: number;
   onRetry: () => void;
-  /** Send my vote; `onVotesIn` reports how many people have voted so far. Leave out to hide Quick vote. */
-  onVote?: (restaurantId: string, onVotesIn: (count: number) => void) => Promise<VoteResult>;
-  onVoteResult: (winner: Restaurant, result: VoteResult) => void;
-  onChangeFilters: () => void;
-  /** "Change filters & try again", or "Start a new group" when the server can't replay a round. */
-  changeFiltersLabel?: string;
+  /** Send my vote. Throws an Error whose message says what went wrong. The winner arrives live. */
+  onVote: (restaurantId: string) => Promise<void>;
+  /** How many people have voted so far (live). */
+  votesIn?: number;
+  /** Host only: back to the lobby for a new round. Leave out for guests (they wait for the host). */
+  onChangeFilters?: () => void;
+  /** e.g. the new round couldn't start. */
+  error?: string;
   onHome: () => void;
 };
 
-type Mode = { kind: "list" } | { kind: "picking"; pick: string | null } | { kind: "voted"; pick: string; votesIn: number };
+type Mode = { kind: "list" } | { kind: "picking"; pick: string | null } | { kind: "voted"; pick: string };
 
 export function NoMatch({
   load,
   memberCount,
   onRetry,
   onVote,
-  onVoteResult,
+  votesIn = 0,
   onChangeFilters,
-  changeFiltersLabel = "Change filters & try again",
+  error,
   onHome,
 }: NoMatchProps) {
   const [mode, setMode] = useState<Mode>({ kind: "list" });
-  const [voteFailed, setVoteFailed] = useState(false);
-  const picks = load?.status === "ready" ? load.picks : [];
-  const canVote = Boolean(onVote) && picks.length >= 2;
+  const [voteError, setVoteError] = useState("");
+  const picks = load.status === "ready" ? load.picks : [];
+  const canVote = picks.length >= 2;
+  // My own vote counts even before the live count catches up.
+  const shownVotes = Math.min(Math.max(votesIn, 1), memberCount);
 
   async function submitVote(pick: string) {
-    setVoteFailed(false);
-    setMode({ kind: "voted", pick, votesIn: 1 });
-    if (!onVote) return;
+    setVoteError("");
+    setMode({ kind: "voted", pick });
     try {
-      const result = await onVote(pick, (votesIn) => setMode({ kind: "voted", pick, votesIn }));
-      const winner = picks.find((p) => p.restaurant.id === result.winnerId)?.restaurant;
-      if (winner) onVoteResult(winner, result);
-    } catch {
-      setVoteFailed(true);
+      await onVote(pick);
+    } catch (e) {
+      setVoteError(e instanceof Error ? e.message : "Your vote didn't go through. Try again.");
       setMode({ kind: "picking", pick });
     }
   }
 
   let subtitle = "Nobody agreed on every spot. Here's what came closest:";
   if (mode.kind === "picking") subtitle = "Tap the place you'd pick. Most votes wins.";
-  if (mode.kind === "voted") subtitle = `Votes in: ${mode.votesIn} of ${memberCount}. Waiting for the rest…`;
-  if (!load) subtitle = "Nobody agreed on every spot this time.";
-  if (load?.status === "ready" && picks.length === 0) subtitle = "Nobody liked any of these places. Try different filters?";
+  if (mode.kind === "voted") subtitle = `Votes in: ${shownVotes} of ${memberCount}. Waiting for the rest…`;
+  if (load.status === "ready" && picks.length === 0) subtitle = "Nobody liked any of these places. Try different filters?";
 
   return (
     <Screen>
@@ -70,9 +69,9 @@ export function NoMatch({
         {subtitle}
       </p>
 
-      {load?.status === "loading" && <p className={styles.status}>Finding the closest picks…</p>}
+      {load.status === "loading" && <p className={styles.status}>Finding the closest picks…</p>}
 
-      {load?.status === "error" && (
+      {load.status === "error" && (
         <div className={styles.status} role="alert">
           <p>Couldn't load the closest picks.</p>
           <Button variant="secondary" onClick={onRetry}>
@@ -129,9 +128,9 @@ export function NoMatch({
         </div>
       )}
 
-      {voteFailed && (
+      {(voteError || error) && (
         <p className={styles.error} role="alert">
-          Your vote didn't go through. Try again.
+          {voteError || error}
         </p>
       )}
 
@@ -140,9 +139,13 @@ export function NoMatch({
       {mode.kind === "list" && (
         <>
           {canVote && <Button onClick={() => setMode({ kind: "picking", pick: null })}>Quick vote on top {picks.length}</Button>}
-          <Button variant="secondary" onClick={onChangeFilters}>
-            {changeFiltersLabel}
-          </Button>
+          {onChangeFilters ? (
+            <Button variant="secondary" onClick={onChangeFilters}>
+              Change filters & try again
+            </Button>
+          ) : (
+            <p className={styles.waitNote}>The host can start a new round with different filters.</p>
+          )}
           <button type="button" className={styles.home} onClick={onHome}>
             Back to home
           </button>
@@ -162,7 +165,7 @@ export function NoMatch({
 
       {mode.kind === "voted" && (
         <Button disabled>
-          Voted · {mode.votesIn} of {memberCount} in
+          Voted · {shownVotes} of {memberCount} in
         </Button>
       )}
     </Screen>
