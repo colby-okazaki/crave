@@ -1,5 +1,5 @@
-// Fake-data mode: restaurants, swipes, closest picks and voting (npm run dev:mock).
-import type { ClosePick, Restaurant, SwipeResult, VoteResult } from "./types";
+// Fake-data mode: restaurants, swipes and closest picks (npm run dev:mock).
+import type { Restaurant, ResultRow, SwipeResult } from "./types";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -43,6 +43,11 @@ const MOCK_DISHES: Record<string, string[]> = {
 /** Mock of GET /groups/:id/restaurants. Every member gets the same list in the same order. */
 export async function getRestaurants(_groupId: string): Promise<Restaurant[]> {
   await wait(500);
+  return mockStack();
+}
+
+/** The fake card stack, right away. */
+export function mockStack(): Restaurant[] {
   return MOCK.map(([name, cuisine, price, rating, distanceMeters, hours, reviewCount], i) => {
     const id = `r_${String(i + 1).padStart(3, "0")}`;
     return {
@@ -83,48 +88,20 @@ export async function sendSwipe(_groupId: string, restaurantId: string, liked: b
   return { ok: true, match: liked && restaurantId === MOCK_MATCH_ID ? { restaurantId } : null };
 }
 
-/**
- * Mock of "closest picks" for the No match screen (not in docs/API.md yet):
- * the top 3 places by likes (ties: closest first). Places nobody liked are left out.
- */
-export async function getClosestPicks(groupId: string, memberIds: string[], myId: string): Promise<ClosePick[]> {
-  const restaurants = await getRestaurants(groupId);
-  const likedBy = (id: string, r: Restaurant) => (id === myId ? myLikes.has(r.id) : FRIEND_LIKES[id]?.includes(r.id));
-  return restaurants
-    .map((restaurant) => ({ restaurant, likes: memberIds.filter((id) => likedBy(id, restaurant)).length }))
-    .filter((p) => p.likes > 0)
-    .sort((a, b) => b.likes - a.likes || a.restaurant.distanceMeters - b.restaurant.distanceMeters)
-    .slice(0, 3);
+/** New round: forget your likes. */
+export function resetMyLikes() {
+  myLikes.clear();
 }
 
 /**
- * Mock of a quick vote (not in docs/API.md yet). Your vote counts first; the fake
- * friends vote a second apart. Most votes wins; a tie goes to the place higher in the list.
+ * Mock of GET /groups/:id/results: the top 3 places by likes (ties: card order, which is
+ * nearest first). Places nobody liked are left out.
  */
-export function castVote(
-  _groupId: string,
-  myPick: string,
-  options: string[],
-  memberCount: number,
-  onVotesIn: (count: number) => void,
-): Promise<VoteResult> {
-  return new Promise((resolve) => {
-    const votes: Record<string, number> = { [myPick]: 1 };
-    let count = 1;
-    onVotesIn(count);
-    const friends = memberCount - 1;
-    if (friends <= 0) return resolve({ winnerId: myPick, votes });
-    const timer = setInterval(() => {
-      // Friends split between the top pick and yours.
-      const pick = count % 2 === 1 ? options[0] : myPick;
-      votes[pick] = (votes[pick] ?? 0) + 1;
-      count += 1;
-      onVotesIn(count);
-      if (count >= memberCount) {
-        clearInterval(timer);
-        const winnerId = options.reduce((best, id) => ((votes[id] ?? 0) > (votes[best] ?? 0) ? id : best), options[0]);
-        setTimeout(() => resolve({ winnerId, votes }), 500);
-      }
-    }, 1000);
-  });
+export function mockResults(memberIds: string[], myId: string): ResultRow[] {
+  const likedBy = (id: string, r: Restaurant) => (id === myId ? myLikes.has(r.id) : FRIEND_LIKES[id]?.includes(r.id));
+  return mockStack()
+    .map((restaurant) => ({ restaurantId: restaurant.id, likes: memberIds.filter((id) => likedBy(id, restaurant)).length }))
+    .filter((p) => p.likes > 0)
+    .sort((a, b) => b.likes - a.likes)
+    .slice(0, 3);
 }

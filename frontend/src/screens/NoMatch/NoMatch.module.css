@@ -117,6 +117,12 @@
   white-space: nowrap;
 }
 
+.waitNote {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+  text-align: center;
+}
+
 .error {
   color: var(--color-error);
   font-size: var(--font-size-label);

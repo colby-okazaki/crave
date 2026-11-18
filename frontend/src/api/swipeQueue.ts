@@ -176,6 +176,13 @@ export function swipeQueueFor(group: GroupRef): SwipeQueue {
   return current.queue;
 }
 
+/** You left the group: drop anything unsent (the server has forgotten you anyway). */
+export function closeSwipeQueue(group: GroupRef) {
+  swipeQueueFor(group).reset();
+  current?.queue.close();
+  current = null;
+}
+
 const EMPTY: SwipeQueueSnapshot = { pending: 0, retrying: false, match: null, noMatch: false, ended: false };
 const noop = () => () => {};
 
