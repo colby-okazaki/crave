@@ -71,7 +71,7 @@
   height: var(--thumb-size);
   overflow: hidden;
   border-radius: var(--radius-thumb);
-  background: linear-gradient(135deg, var(--color-photo-from) 0%, var(--color-photo-to) 71.4%);
+  background: var(--photo-placeholder);
 }
 
 .thumb img {

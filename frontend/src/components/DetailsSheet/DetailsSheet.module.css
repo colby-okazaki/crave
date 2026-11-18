@@ -94,7 +94,7 @@
   height: var(--sheet-photo-height);
   overflow: hidden;
   border-radius: var(--radius-photo);
-  background: linear-gradient(142deg, var(--color-photo-from) 0%, var(--color-photo-to) 71.4%);
+  background: var(--photo-placeholder);
 }
 
 .photo img {

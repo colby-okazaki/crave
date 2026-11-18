@@ -39,6 +39,8 @@ function connectLive(group: GroupRef): LiveConnection {
 
   const socket = io(API_URL, { auth: { groupId: group.groupId, memberId: group.memberId } });
 
+  socket.on("connect", () => update({ connected: true }));
+  socket.on("disconnect", () => update({ connected: false }));
   socket.on(
     "state",
     (state: {

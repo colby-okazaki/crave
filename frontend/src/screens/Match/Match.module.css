@@ -60,7 +60,7 @@
 
 .photo {
   height: var(--match-photo-height);
-  background: linear-gradient(150deg, var(--color-photo-from) 0%, var(--color-photo-to) 71.4%);
+  background: var(--photo-placeholder);
 }
 
 .photo img {
