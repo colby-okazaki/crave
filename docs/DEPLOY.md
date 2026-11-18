@@ -47,7 +47,7 @@ OpenStreetMap has almost no photos (none in a test of 80 places), so for photos 
 1. In [Google Cloud](https://console.cloud.google.com), use a project on your own account (a school or work organization may block API keys).
 2. Turn on billing, then **set a budget with an alert and a cap**. Check the current Places API pricing and free monthly credit on Google's pricing page first.
 3. Enable **Places API (New)** and create an API key. Under "API restrictions", limit the key to Places API (New).
-4. In Render, on `crave-backend`, add two environment variables: `GOOGLE_PLACES_API_KEY` (the key) and `RESTAURANT_SOURCE` = `google` (replacing `osm`). Never put the key in GitHub or send it in chat.
+4. In Render, open `crave-backend`, then **Environment**, and paste the key into `GOOGLE_PLACES_API_KEY`. `render.yaml` already sets `RESTAURANT_SOURCE` to `google` (a blueprint overwrites values edited by hand, so change it in the file, not the dashboard). Never put the key in GitHub or send it in chat.
 5. Check a group's cards: each should have a `photoUrl` that starts with the server's address.
 
 How it behaves:
