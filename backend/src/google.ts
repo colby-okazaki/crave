@@ -141,6 +141,7 @@ export function createGoogleProvider(options: Options): RestaurantProvider {
           });
 
       const t = now();
+      logPhotoShape(data.places ?? []);
       return (data.places ?? [])
         .map((p) => toGoogleRestaurant(p, location, publicUrl, t))
         .filter((r): r is Restaurant => r !== null && r.distanceMeters <= radius)
@@ -149,6 +150,20 @@ export function createGoogleProvider(options: Options): RestaurantProvider {
         .slice(0, MAX_RESULTS);
     },
   };
+}
+
+// Says in the logs how many places came with photos and what their names look like, so a
+// "no photos" problem can be told apart from "Google sent none" (no key or secrets are logged)
+let loggedShape = 0;
+function logPhotoShape(places: GooglePlace[]) {
+  if (loggedShape >= 3) return;
+  loggedShape++;
+  const withPhotos = places.filter((p) => p.photos?.length);
+  const sample = withPhotos[0]?.photos?.[0]?.name ?? "";
+  const ok = /^places\/([\w-]+)\/photos\/([\w-]+)$/.test(sample);
+  console.log(
+    `Google sent ${places.length} places, ${withPhotos.length} with photos; first photo name ${sample ? `has ${sample.length} characters, matches expected shape: ${ok}, shape: ${sample.replace(/[A-Za-z0-9]/g, "x").slice(0, 40)}` : "(none)"}`,
+  );
 }
 
 function defaultPublicUrl(): string {
