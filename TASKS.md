@@ -86,6 +86,6 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 - [x] Nudge, quick vote and a new round in the same group
 
 **Launch**
-- [ ] Host the server and database online so it works on real phones (Docker image, rate limits, `render.yaml` and the steps in `docs/DEPLOY.md` are ready; needs a host account)
-- [ ] Share the live base URL with Davin
+- [x] Host the server online so it works on real phones (live on Render, see the README; a database is still to do so groups survive restarts)
+- [x] Share the live base URL with Davin (in the README)
 - [ ] Fix what breaks during the dinner test
