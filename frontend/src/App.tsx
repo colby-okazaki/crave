@@ -16,7 +16,7 @@ import { Swipe, type SwipeLoadState } from "./screens/Swipe/Swipe";
 import { Waiting } from "./screens/Waiting/Waiting";
 import { fromApiFilters, toApiFilters } from "./utils/filters";
 import { shareInvite } from "./utils/shareInvite";
-import { loadNickname, loadPlace, saveNickname, savePlace } from "./utils/storage";
+import { clearVote, loadNickname, loadPlace, loadVote, saveNickname, savePlace, saveVote } from "./utils/storage";
 
 /** Who you are in the group you're in. Passed between screens as router state (survives a page refresh). */
 type GroupSession = GroupRef & {
@@ -71,6 +71,7 @@ function errorMessage(error: unknown): string {
 function leaveGroup(session: GroupRef) {
   // Best effort: if it doesn't arrive, the group still closes on its own after a while.
   api.leaveGroup(session.groupId, session.memberId).catch(() => {});
+  clearVote(session.groupId, session.memberId);
   closeSwipeQueue(session);
   closeLive();
 }
@@ -82,6 +83,25 @@ function useGoBack() {
     const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
     if (idx > 0) navigate(-1);
     else navigate("/", { replace: true });
+  };
+}
+
+/**
+ * Into the Lobby after creating or joining. Replaces the Create / Join form so Back doesn't
+ * return to it. If the app was opened straight on that form (an invite link), Home goes
+ * underneath first: otherwise Back would leave the site without asking, and you'd stay in
+ * the group as someone who never swipes, which blocks every match.
+ */
+function useEnterGroup() {
+  const navigate = useNavigate();
+  return (session: GroupSession) => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (idx === 0) {
+      navigate("/", { replace: true });
+      navigate("/lobby", { state: session });
+    } else {
+      navigate("/lobby", { state: session, replace: true });
+    }
   };
 }
 
@@ -103,6 +123,7 @@ function useGroupNavigation(
     if (!session || live.round === round.current) return;
     round.current = live.round;
     swipeQueueFor(session).reset();
+    clearVote(session.groupId, session.memberId);
     if (follow.newRound) navigate("/lobby", { state: groupOnly(session), replace: true });
   }, [live.round]);
 
@@ -125,6 +146,7 @@ function useGroupNavigation(
       navigate("/swipe", { state: group, replace: true });
     } else if (follow.lobby && backInLobby) {
       swipeQueueFor(session).reset();
+      clearVote(session.groupId, session.memberId);
       navigate("/lobby", { state: group, replace: true });
     }
   }, [live.ended, live.match, live.noMatch, live.started, backInLobby]);
@@ -201,7 +223,7 @@ function HomeRoute() {
 }
 
 function CreateRoute() {
-  const navigate = useNavigate();
+  const enterGroup = useEnterGroup();
   const goBack = useGoBack();
   return (
     <>
@@ -225,7 +247,7 @@ function CreateRoute() {
             nickname,
             isHost: true,
           };
-          navigate("/lobby", { state: session, replace: true });
+          enterGroup(session);
         }}
       />
     </>
@@ -234,7 +256,7 @@ function CreateRoute() {
 
 function JoinRoute() {
   const goBack = useGoBack();
-  const navigate = useNavigate();
+  const enterGroup = useEnterGroup();
   const [params] = useSearchParams();
   return (
     <>
@@ -254,8 +276,7 @@ function JoinRoute() {
             nickname,
             isHost: false,
           };
-          // Replace so Back from the Lobby goes Home, not to the filled-in Join form.
-          navigate("/lobby", { state: session, replace: true });
+          enterGroup(session);
         }}
       />
     </>
@@ -503,6 +524,27 @@ function NoMatchRoute() {
 
   useGroupNavigation(session, live, { newRound: true, lobby: true });
 
+  // Someone joined after the round ended, which reopens it: they have every card to swipe.
+  // Back to Swipe: anyone with cards left carries on, anyone who's done lands on Waiting.
+  // Only once this screen has seen the round over (or a fresh `state` after a refresh), so a
+  // slow `no_match` event right after arriving here doesn't bounce you back.
+  const sawNoMatch = useRef(live.noMatch);
+  const freshConnection = useRef(live.members === null);
+  useEffect(() => {
+    if (!session) return;
+    if (live.noMatch) {
+      sawNoMatch.current = true;
+      return;
+    }
+    const reopened = sawNoMatch.current || (freshConnection.current && live.members !== null);
+    if (reopened && live.started && !live.match) {
+      clearVote(session.groupId, session.memberId);
+      // Your last swipe may have said "no match" too; that's no longer true.
+      swipeQueueFor(session).reopen();
+      navigate("/swipe", { state: groupOnly(session), replace: true });
+    }
+  }, [live.noMatch, live.members === null]);
+
   // The vote's winner (or a late match) arrives as match_found. Everyone goes, voted or not.
   useEffect(() => {
     if (!session || !live.match) return;
@@ -539,11 +581,16 @@ function NoMatchRoute() {
         load={load}
         memberCount={live.vote?.total ?? members.length}
         votesIn={live.vote?.votesIn}
+        // Only while the server says a vote is going (after a refresh, until `state` arrives, it doesn't).
+        myVote={live.vote?.votesIn ? (loadVote(session.groupId, session.memberId) ?? undefined) : undefined}
         onRetry={fetchPicks}
         onVote={async (restaurantId) => {
+          // Remember it before sending, so a refresh while it's on its way still shows "Voted".
+          saveVote(session.groupId, session.memberId, restaurantId);
           try {
             await api.vote(session.groupId, session.memberId, restaurantId);
           } catch (e) {
+            clearVote(session.groupId, session.memberId);
             throw new Error(
               e instanceof ApiError && e.code === "NO_VOTE_OPEN" ? errorMessage(e) : "Your vote didn't go through. Try again.",
             );

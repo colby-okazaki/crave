@@ -66,7 +66,11 @@ function connectLive(group: GroupRef): LiveConnection {
   );
   socket.on("member_joined", ({ member }: { member: Member }) => {
     const members = snapshot.members ?? [];
-    if (!members.some((m) => m.id === member.id)) update({ members: [...members, member] });
+    if (members.some((m) => m.id === member.id)) return;
+    // Like the server: someone new reopens a round that ended with no match (they still have
+    // every card to swipe), and any quick vote that had started is off.
+    const reopen = snapshot.noMatch && !snapshot.match ? { noMatch: false, vote: null, voteResult: null } : {};
+    update({ members: [...members, member], ...reopen });
   });
   socket.on("member_left", ({ memberId, hostId }: { memberId: string; hostId: string | null }) => {
     const { [memberId]: _gone, ...progress } = snapshot.progress;

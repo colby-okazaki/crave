@@ -76,6 +76,11 @@ class SwipeQueue {
     this.update({ pending: 0, retrying: false, match: null, noMatch: false });
   }
 
+  /** Someone joined after the round ended with no match, which reopens it: forget that answer. */
+  reopen() {
+    this.update({ noMatch: false });
+  }
+
   close() {
     window.clearTimeout(this.retryTimer);
     window.removeEventListener("online", this.retryNow);
