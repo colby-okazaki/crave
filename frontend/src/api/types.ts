@@ -100,6 +100,8 @@ export type LiveSnapshot = {
   nudge: { from: Member; at: number } | null;
   /** Goes up by one each time the host starts a new round (`round_reset`). */
   round: number;
+  /** The live connection is up right now (false while it reconnects). */
+  connected: boolean;
 };
 
 export const EMPTY_SNAPSHOT: LiveSnapshot = {
@@ -115,6 +117,7 @@ export const EMPTY_SNAPSHOT: LiveSnapshot = {
   voteResult: null,
   nudge: null,
   round: 0,
+  connected: false,
 };
 
 /** What a new round clears (the members, host and live connection stay). */

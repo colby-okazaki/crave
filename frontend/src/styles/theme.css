@@ -20,8 +20,8 @@
   --color-confetti-pink: #ffb2cc;
   --color-pass: #ed4545; /* Pass button, NOPE stamp */
   --color-progress-track: #ebe5e0;
-  --color-photo-from: #ffb873; /* photo placeholder gradient */
-  --color-photo-to: #ed545c;
+  /* Photo placeholder (no photo, still loading, or it failed): the logo mark on a soft tint. */
+  --photo-placeholder: url("../assets/logo-mark.svg") center / 36% auto no-repeat, var(--color-primary-soft);
   /* Not in Figma (no dialog designed yet): dim layer behind the Leave dialog. */
   --color-scrim: rgb(28 28 33 / 0.4);
   /* Not in Figma (no dropdown designed yet): lift for the cuisine dropdown. */

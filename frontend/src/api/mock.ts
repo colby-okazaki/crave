@@ -49,7 +49,7 @@ class FakeGroup {
   private votes: Record<string, string> = {};
 
   constructor(private me: GroupRef) {
-    this.snapshot = { ...EMPTY_SNAPSHOT, hostId: me.isHost ? me.memberId : "m_host" };
+    this.snapshot = { ...EMPTY_SNAPSHOT, hostId: me.isHost ? me.memberId : "m_host", connected: true };
     this.stopMembers = watchMembers({ id: me.memberId, nickname: me.nickname }, me.isHost, (members) =>
       this.update({ members }),
     );

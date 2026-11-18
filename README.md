@@ -49,13 +49,14 @@ Updated as each pull request merges. Last updated: 2026-11-18.
 | Back end: host-only filters and start, `hostId` in `state`, and leaving a group (the leaver's votes go, the host role passes on, the rest can still match) | Done, tested |
 | Front end: all 9 screens (Home, Create, Join, Lobby, Swipe, Details, Waiting, Match, No match), connected to the real server, with a fake-data mode (`npm run dev:mock`) | Done, not yet tried on a real phone |
 | Front end: leave (the host role passes on), live progress on the Waiting screen, nudge (with the "X nudged you" banner), end round early, closest picks, quick vote and a new round in the same group, all on the real server | Done, tested with three browsers against the server; not yet on a real phone |
+| Front end: loading, empty and error states on every screen, a "Waking up the server…" note when the free server is slow to answer, "Reconnecting…" when the live connection drops, and a logo placeholder for places without a photo (price and rating are hidden when unknown) | Done |
 | Both: API contract in [`docs/API.md`](docs/API.md), and the front end and back end agree on the 4-digit code format | Done |
 
 **Next**
 
 | Area | Owner |
 | --- | --- |
-| Front end: loading and error states (including "server is waking up"), photo placeholder, swipe polish, the brand red and name, app icon; try it on a real phone | Davin |
+| Front end: the brand red and name, app icon and splash screen, style guide; try it on a real phone | Davin |
 | Back end: add a database so groups survive restarts and sleep (hosting steps: [`docs/DEPLOY.md`](docs/DEPLOY.md)) | Colby |
 | Both: test with a real group at dinner | Both |
 

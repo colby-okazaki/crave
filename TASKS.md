@@ -41,13 +41,13 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 - [x] No match: widen filters or start over
 
 **Wiring and polish**
-- [ ] Swipe gestures and card animations
+- [x] Swipe gestures and card animations
 - [x] Build every screen against the mock data in `docs/mock/`
 - [x] Connect each screen to the real endpoints
 - [x] Live updates over Socket.io (people joining, a match landing)
 - [x] Group controls on the real server: leave, progress, nudge, end round, closest picks, quick vote, new round
-- [ ] Loading, empty, and error states on every screen
-- [ ] "Open directions" button hands off to the phone's maps app
+- [x] Loading, empty, and error states on every screen
+- [x] "Open directions" button hands off to the phone's maps app
 
 ## Back end (Colby)
 

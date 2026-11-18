@@ -3,7 +3,7 @@ import { createBrowserRouter, Navigate, RouterProvider, useBlocker, useLocation,
 import { api } from "./api";
 import { closeLive, useLive } from "./api/live";
 import { closeSwipeQueue, queueNotice, swipeQueueFor, useSwipeQueue } from "./api/swipeQueue";
-import { Banner } from "./components/Banner/Banner";
+import { StatusBanner } from "./components/Banner/StatusBanner";
 import { ConfirmDialog } from "./components/ConfirmDialog/ConfirmDialog";
 import { ApiError, type ClosePick, type GroupRef, type LiveSnapshot } from "./api/types";
 import { CreateGroup } from "./screens/CreateGroup/CreateGroup";
@@ -187,13 +187,16 @@ function HomeRoute() {
   const navigate = useNavigate();
   const notice = (useLocation().state as { notice?: string } | null)?.notice;
   return (
-    <Home
-      locationLabel={loadPlace()?.label}
-      notice={notice}
-      onCreateGroup={() => navigate("/create")}
-      onJoinWithCode={() => navigate("/join")}
-      onChangeLocation={() => navigate("/create")}
-    />
+    <>
+      <StatusBanner />
+      <Home
+        locationLabel={loadPlace()?.label}
+        notice={notice}
+        onCreateGroup={() => navigate("/create")}
+        onJoinWithCode={() => navigate("/join")}
+        onChangeLocation={() => navigate("/create")}
+      />
+    </>
   );
 }
 
@@ -201,28 +204,31 @@ function CreateRoute() {
   const navigate = useNavigate();
   const goBack = useGoBack();
   return (
-    <CreateGroup
-      initialName={loadNickname()}
-      initialPlace={loadPlace()}
-      onBack={goBack}
-      onSearch={(query) => api.geocode(query)}
-      errorMessage={errorMessage}
-      onCreate={async (nickname, place) => {
-        // Default filters for now; the host changes them in the Lobby.
-        const group = await api.createGroup(nickname, { lat: place.lat, lng: place.lng }, toApiFilters(DEFAULT_FILTERS));
-        saveNickname(nickname);
-        savePlace(place);
-        closeLive();
-        const session: GroupSession = {
-          groupId: group.groupId,
-          memberId: group.memberId,
-          code: group.joinCode,
-          nickname,
-          isHost: true,
-        };
-        navigate("/lobby", { state: session, replace: true });
-      }}
-    />
+    <>
+      <StatusBanner />
+      <CreateGroup
+        initialName={loadNickname()}
+        initialPlace={loadPlace()}
+        onBack={goBack}
+        onSearch={(query) => api.geocode(query)}
+        errorMessage={errorMessage}
+        onCreate={async (nickname, place) => {
+          // Default filters for now; the host changes them in the Lobby.
+          const group = await api.createGroup(nickname, { lat: place.lat, lng: place.lng }, toApiFilters(DEFAULT_FILTERS));
+          saveNickname(nickname);
+          savePlace(place);
+          closeLive();
+          const session: GroupSession = {
+            groupId: group.groupId,
+            memberId: group.memberId,
+            code: group.joinCode,
+            nickname,
+            isHost: true,
+          };
+          navigate("/lobby", { state: session, replace: true });
+        }}
+      />
+    </>
   );
 }
 
@@ -231,25 +237,28 @@ function JoinRoute() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   return (
-    <JoinGroup
-      initialName={loadNickname()}
-      initialCode={params.get("code") ?? ""}
-      onBack={goBack}
-      onJoin={(code, nickname) => api.joinGroup(code, nickname)}
-      onJoined={(result, nickname, code) => {
-        saveNickname(nickname);
-        closeLive();
-        const session: GroupSession = {
-          groupId: result.groupId,
-          memberId: result.memberId,
-          code,
-          nickname,
-          isHost: false,
-        };
-        // Replace so Back from the Lobby goes Home, not to the filled-in Join form.
-        navigate("/lobby", { state: session, replace: true });
-      }}
-    />
+    <>
+      <StatusBanner />
+      <JoinGroup
+        initialName={loadNickname()}
+        initialCode={params.get("code") ?? ""}
+        onBack={goBack}
+        onJoin={(code, nickname) => api.joinGroup(code, nickname)}
+        onJoined={(result, nickname, code) => {
+          saveNickname(nickname);
+          closeLive();
+          const session: GroupSession = {
+            groupId: result.groupId,
+            memberId: result.memberId,
+            code,
+            nickname,
+            isHost: false,
+          };
+          // Replace so Back from the Lobby goes Home, not to the filled-in Join form.
+          navigate("/lobby", { state: session, replace: true });
+        }}
+      />
+    </>
   );
 }
 
@@ -279,6 +288,7 @@ function LobbyRoute() {
 
   return (
     <>
+      <StatusBanner live={live} />
       <Lobby
         code={session.code}
         members={live.members}
@@ -377,7 +387,7 @@ function SwipeRoute() {
 
   return (
     <>
-      <Banner message={nudge ?? newRound.error} />
+      <StatusBanner live={live} message={nudge ?? newRound.error} />
       <Swipe
         load={load}
         initialIndex={firstUnswiped === -1 ? restaurants.length : firstUnswiped}
@@ -422,6 +432,7 @@ function WaitingRoute() {
 
   return (
     <>
+      <StatusBanner live={live} />
       <Waiting
         members={members}
         notice={error || queueNotice(queue)}
@@ -469,13 +480,16 @@ function MatchRoute() {
   const me = { id: session.memberId, nickname: session.nickname };
 
   return (
-    <Match
-      places={places}
-      members={live.members ?? [me]}
-      vote={session.vote}
-      onNewRound={newRound.start}
-      error={newRound.error}
-    />
+    <>
+      <StatusBanner live={live} />
+      <Match
+        places={places}
+        members={live.members ?? [me]}
+        vote={session.vote}
+        onNewRound={newRound.start}
+        error={newRound.error}
+      />
+    </>
   );
 }
 
@@ -519,27 +533,30 @@ function NoMatchRoute() {
   if (!session) return <Navigate to="/" replace />;
 
   return (
-    <NoMatch
-      load={load}
-      memberCount={live.vote?.total ?? members.length}
-      votesIn={live.vote?.votesIn}
-      onRetry={fetchPicks}
-      onVote={async (restaurantId) => {
-        try {
-          await api.vote(session.groupId, session.memberId, restaurantId);
-        } catch (e) {
-          throw new Error(
-            e instanceof ApiError && e.code === "NO_VOTE_OPEN" ? errorMessage(e) : "Your vote didn't go through. Try again.",
-          );
-        }
-      }}
-      onChangeFilters={newRound.start}
-      error={newRound.error}
-      onHome={() => {
-        leaveGroup(session);
-        navigate("/", { replace: true });
-      }}
-    />
+    <>
+      <StatusBanner live={live} />
+      <NoMatch
+        load={load}
+        memberCount={live.vote?.total ?? members.length}
+        votesIn={live.vote?.votesIn}
+        onRetry={fetchPicks}
+        onVote={async (restaurantId) => {
+          try {
+            await api.vote(session.groupId, session.memberId, restaurantId);
+          } catch (e) {
+            throw new Error(
+              e instanceof ApiError && e.code === "NO_VOTE_OPEN" ? errorMessage(e) : "Your vote didn't go through. Try again.",
+            );
+          }
+        }}
+        onChangeFilters={newRound.start}
+        error={newRound.error}
+        onHome={() => {
+          leaveGroup(session);
+          navigate("/", { replace: true });
+        }}
+      />
+    </>
   );
 }
 
