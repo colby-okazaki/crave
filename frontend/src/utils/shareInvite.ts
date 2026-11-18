@@ -15,7 +15,7 @@ export async function shareInvite(code: string): Promise<ShareOutcome> {
 
   if (navigator.share) {
     try {
-      await navigator.share({ title: "Restaurant Decider", text, url });
+      await navigator.share({ title: "Crave", text, url });
       return "shared";
     } catch (error) {
       // Closing the share sheet throws AbortError; that's not a failure.

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "../../components/Button/Button";
 import { Screen, Spacer } from "../../components/Screen/Screen";
 import type { ClosePick } from "../../api/types";
@@ -19,6 +19,8 @@ type NoMatchProps = {
   onVote: (restaurantId: string) => Promise<void>;
   /** How many people have voted so far (live). */
   votesIn?: number;
+  /** What you already voted for (e.g. before a refresh): shows "Voted" instead of the vote button. */
+  myVote?: string;
   /** Host only: back to the lobby for a new round. Leave out for guests (they wait for the host). */
   onChangeFilters?: () => void;
   /** e.g. the new round couldn't start. */
@@ -34,11 +36,16 @@ export function NoMatch({
   onRetry,
   onVote,
   votesIn = 0,
+  myVote,
   onChangeFilters,
   error,
   onHome,
 }: NoMatchProps) {
-  const [mode, setMode] = useState<Mode>({ kind: "list" });
+  const [mode, setMode] = useState<Mode>(myVote ? { kind: "voted", pick: myVote } : { kind: "list" });
+  // After a refresh the live count arrives a moment later; then show your vote again.
+  useEffect(() => {
+    if (myVote && mode.kind === "list") setMode({ kind: "voted", pick: myVote });
+  }, [myVote]);
   const [voteError, setVoteError] = useState("");
   const picks = load.status === "ready" ? load.picks : [];
   const canVote = picks.length >= 2;

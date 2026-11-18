@@ -47,7 +47,7 @@ All server calls go through [`src/api/`](src/api/): `real.ts` (the back end, fol
 
 ## Brand
 
-Logo files are in [`../assets/logo/`](../assets/logo/) (PNG at 2000px and 1024px, plus the original WebP). Primary color is `#EE4135`, the logo red. Both are placeholders until the style guide is done.
+Logo files are in [`../assets/logo/`](../assets/logo/) (PNG at 2000px and 1024px, plus the original WebP). Primary color is `#EE4135`, the logo red. Colors, type, spacing and components are in the style guide, [`docs/STYLE.md`](../docs/STYLE.md); the favicon, app icons and home-screen manifest are in [`public/`](public/).
 
 ## Rules
 

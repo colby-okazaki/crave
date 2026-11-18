@@ -1,15 +1,32 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" style="background: #fcf7f2">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#FCF7F2" />
+    <meta name="description" content="Swipe on nearby restaurants with your friends. When everyone likes the same place, it's a match." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Restaurant Decider</title>
+    <meta name="apple-mobile-web-app-title" content="Crave" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>Crave</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Splash: shows while the app loads (a sleeping server or slow phone), then React replaces it. -->
+    <div id="root">
+      <div style="display: flex; min-height: 100dvh; align-items: center; justify-content: center">
+        <svg width="96" height="96" viewBox="0 0 512 512" role="img" aria-label="Crave">
+          <rect width="512" height="512" rx="112" fill="#ee4135" />
+          <g transform="translate(256 256) scale(5.9) translate(-50 -50)" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M42 66C33 58 26 48 26 38c0-6.5 4.5-9.5 10-9.5 5 0 10 2 14 4.5 4-2.5 9-4.5 14-4.5 5.5 0 10 3 10 9.5 0 12-12 25-24 34V55" />
+            <path d="M45.2 41v6c0 4.5 2.2 7.4 4.8 8 2.6-.6 4.8-3.5 4.8-8v-6M50 41v9" />
+          </g>
+        </svg>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -28,8 +28,8 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 - [ ] Talk to a few friends about how their group usually picks a place
 - [ ] Sketch the main flow
 - [ ] Build mockups in Figma
-- [ ] Small style guide: colors, type, buttons, card style (start from the logo red `#EE4135`)
-- [ ] App icon and splash screen from the logo in `assets/logo/`
+- [x] Small style guide: colors, type, buttons, card style (start from the logo red `#EE4135`): [`docs/STYLE.md`](docs/STYLE.md)
+- [x] App icon and splash screen from the logo in `assets/logo/`
 - [ ] Test the mockups with 3 to 5 people and fix what confuses them
 
 **Screens**

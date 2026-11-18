@@ -1,8 +1,8 @@
-/* Design tokens from the Figma file (restaurant-decider). Use these everywhere; no one-off values in screens. */
+/* Design tokens (started from the Figma file; documented in docs/STYLE.md). Use these everywhere; no one-off values in screens. */
 :root {
   /* Color */
-  --color-primary: #ff5c4d;
-  --color-primary-pressed: #e8503f;
+  --color-primary: #ee4135; /* brand red, from the logo */
+  --color-primary-pressed: #d4372c;
   --color-on-primary: #ffffff;
   --color-bg: #fcf7f2;
   --color-surface: #ffffff;
