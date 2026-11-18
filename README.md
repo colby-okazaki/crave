@@ -53,7 +53,7 @@ Updated as each pull request merges. Last updated: 2026-11-14.
 | Area | Owner |
 | --- | --- |
 | Front end: call the new leave, nudge, vote, end-round, results and new-round endpoints (see [`docs/API.md`](docs/API.md)), try it on a real phone, fix the brand red and name | Davin |
-| Back end: host the server online, add a database | Colby |
+| Back end: host the server online (config and steps ready: [`render.yaml`](render.yaml), [`docs/DEPLOY.md`](docs/DEPLOY.md); needs a Render account), add a database | Colby |
 | Both: test with a real group at dinner | Both |
 
 ## Run it locally
