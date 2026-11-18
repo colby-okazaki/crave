@@ -110,7 +110,11 @@ test("everyone saying no to everything fires no_match once, and a late joiner re
   fresh.disconnect();
 
   // Someone joining afterwards hasn't swiped, so the group has places left again
+  const joinedEvent = new Promise<any>((resolve) => socket.once("member_joined", resolve));
   const joined = (await call("POST", `/groups/${joinCode}/join`, { nickname: "late" })).body;
+  // The event says the round reopened, and the join response doesn't leak that flag
+  assert.equal((await joinedEvent).reopened, true);
+  assert.equal("reopened" in joined, false);
   const again = io(base, { auth: { groupId, memberId: joined.memberId }, transports: ["websocket"] });
   assert.equal((await new Promise<any>((resolve) => again.once("state", resolve))).noMatch, false);
   again.disconnect();

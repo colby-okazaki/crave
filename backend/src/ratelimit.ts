@@ -9,7 +9,7 @@ import { rateLimit } from "express-rate-limit";
 // - create: stops one address from filling up all the codes
 // - geocode: place searches go to a shared outside service, so keep one address polite
 // - photos: restaurant photos, kept out of the general count because a swipe stack loads many at once
-// - general: a loose ceiling on everything else
+// - general: a loose ceiling on everything else (1200 a minute: six phones swiping fast on one Wi-Fi stay well under it)
 //
 // RATE_LIMIT=off turns them all off (used by the tests and the load test).
 function limiter(max: number, options: { failedOnly?: boolean } = {}): RequestHandler {
@@ -33,7 +33,8 @@ export function createLimiters(): { general: RequestHandler; create: RequestHand
     return { general: pass, create: pass, join: pass, geocode: pass, photos: pass };
   }
   return {
-    general: limiter(300),
+    // Every swipe is a request and a table of phones shares one address, so leave room
+    general: limiter(1200),
     create: limiter(20),
     join: limiter(10, { failedOnly: true }),
     geocode: limiter(30),

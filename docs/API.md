@@ -267,7 +267,7 @@ If the IDs don't belong to an open group, the connection is refused and `connect
 | `round_started` | The host started the round: go to swiping | `{}` |
 | `progress` | A member swiped a card | `{ "memberId": "m_b812", "swiped": 14, "total": 20 }` (`total` is the stack size; 0 until the cards were fetched) |
 | `member_left` | Someone left the group | `{ "memberId": "m_b812", "hostId": "m_7f3a" }` (`hostId` is the host now, in case it changed) |
-| `member_joined` | Someone joins the group | `{ "member": { "id": "m_b812", "nickname": "Davin" } }` |
+| `member_joined` | Someone joins the group | `{ "member": { "id": "m_b812", "nickname": "Davin" }, "reopened": false }`. `reopened` is `true` when the join un-ended an early end or a no match (the newcomer has cards to swipe, and any earlier votes are cleared) |
 | `no_match` | Every member has swiped every place and nobody matched. Sent once; a person joining afterwards reopens the stack (`noMatch` goes back to false) | `{}` |
 | `match_found` | A swipe made a match | `{ "restaurant": { "id": "r_001", "name": "La Taqueria", "address": "2889 Mission St, San Francisco, CA", "hours": "11:00–21:00", "location": { "lat": 37.7509, "lng": -122.4181 } } }` |
 
@@ -287,7 +287,7 @@ Every error uses the same shape, so the front end can show `message` directly:
 | `INVALID_INPUT` | 400 | Missing or bad fields |
 | `NO_RESTAURANTS` | 200 + empty list | Nothing matched the filters (not an error; show the "widen filters" screen) |
 | `RESTAURANTS_UNAVAILABLE` | 503 | The restaurant source is busy or down. Safe to retry; the next request tries again |
-| `RATE_LIMITED` | 429 | Too many wrong join codes (10 a minute), too many groups created (20 a minute), or too many requests overall (300 a minute) from one address. Show `message`; the `Retry-After` header says how many seconds to wait |
+| `RATE_LIMITED` | 429 | Too many wrong join codes (10 a minute), too many groups created (20 a minute), or too many requests overall (1200 a minute) from one address. Show `message`; the `Retry-After` header says how many seconds to wait |
 | `NUDGE_COOLDOWN` | 429 | Nudged that person less than a minute ago |
 | `NO_VOTE_OPEN` | 409 | A quick vote only opens after a round with no match |
 | `NOT_HOST` | 403 | Only the host can change filters or start the round |
@@ -299,5 +299,5 @@ Every error uses the same shape, so the front end can show `message` directly:
 
 - [x] Match rule: everyone says yes (built that way).
 - [x] A person who joins late sees the whole stack from the start, and has to like a place for it to match.
-- [ ] How many restaurants per group? (Suggest 20 to start.)
-- [ ] Can the group creator change filters after people join?
+- [x] How many restaurants per group? 20.
+- [x] Can the group creator change filters after people join? Yes, the host can, in the lobby, until the round starts.

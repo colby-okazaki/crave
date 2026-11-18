@@ -54,7 +54,7 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 **Setup**
 - [x] Pick the stack (language, framework, database) and write it in `backend/README.md`
 - [x] Pick the restaurant API: OpenStreetMap, free and no key (Nominatim: 1 request a second, so cached; a paid provider can replace it later)
-- [ ] Keep keys in `backend/.env` only
+- [x] Keep keys in `backend/.env` only (it is git-ignored; Render holds the live key)
 
 **Groups**
 - [x] `POST /groups`: create a group with location and filters, return ID and join code

@@ -140,9 +140,12 @@ export function joinGroup(joinCode: string, nickname: string) {
   }
   const member: Member = { id: newId("m"), nickname };
   group.members.push(member);
-  // A newcomer hasn't swiped yet, so the group isn't out of places any more
+  // A newcomer hasn't swiped yet, so the group isn't out of places any more. Any votes cast
+  // before they arrived are dropped, so the vote starts fresh with them included.
+  const reopened = group.exhausted === true;
   group.exhausted = false;
-  return { groupId: group.id, memberId: member.id, members: group.members };
+  group.votes = undefined;
+  return { groupId: group.id, memberId: member.id, members: group.members, reopened };
 }
 
 // Takes a member out of the group. Their votes go with them, so they can't block a match,

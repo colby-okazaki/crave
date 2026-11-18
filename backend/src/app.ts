@@ -113,8 +113,9 @@ export function buildApp(
     const nickname = readNickname(req.body?.nickname);
     const result = joinGroup(String(req.params.code), nickname);
     const member = result.members.find((m) => m.id === result.memberId);
-    emitToGroup(result.groupId, "member_joined", { member });
-    res.json(result);
+    emitToGroup(result.groupId, "member_joined", { member, reopened: result.reopened });
+    const { reopened: _reopened, ...body } = result;
+    res.json(body);
   });
 
   // Host changes filters in the lobby. Locked once the round starts or the cards were fetched,
