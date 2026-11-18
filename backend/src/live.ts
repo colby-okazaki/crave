@@ -36,6 +36,7 @@ export function attachLive(server: HttpServer) {
       filters: group?.filters ?? {},
       started: group?.started ?? false,
       progress: group ? progressOf(group) : [],
+      votesIn: group?.votes?.size ?? 0,
       noMatch: group?.exhausted ?? false,
       match: group?.match ? { restaurant: matchPayload(group.match) } : null,
     });

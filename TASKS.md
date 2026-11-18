@@ -16,11 +16,11 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 
 ## Shared (both of you, before building much)
 
-- [ ] Agree on the endpoints and response shapes in [`docs/API.md`](docs/API.md)
-- [ ] Decide what a restaurant card's data looks like (field names)
+- [x] Agree on the endpoints and response shapes in [`docs/API.md`](docs/API.md)
+- [x] Decide what a restaurant card's data looks like (field names)
 - [x] Decide what counts as a match: everyone says yes, or most people? (Everyone.)
-- [ ] Decide what error messages look like
-- [ ] Set up the GitHub repo and add each other as collaborators
+- [x] Decide what error messages look like
+- [x] Set up the GitHub repo and add each other as collaborators
 
 ## Front end (Davin)
 
@@ -33,18 +33,18 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 - [ ] Test the mockups with 3 to 5 people and fix what confuses them
 
 **Screens**
-- [ ] Home: start a group or join with a code
-- [ ] Group setup: location, distance, price, food type
-- [ ] Waiting room: who has joined so far
-- [ ] Swipe: cards with photo, name, price, rating, distance
-- [ ] Match: the fun moment, plus address and directions
-- [ ] No match: widen filters or start over
+- [x] Home: start a group or join with a code
+- [x] Group setup: location, distance, price, food type
+- [x] Waiting room: who has joined so far
+- [x] Swipe: cards with photo, name, price, rating, distance
+- [x] Match: the fun moment, plus address and directions
+- [x] No match: widen filters or start over
 
 **Wiring and polish**
 - [ ] Swipe gestures and card animations
-- [ ] Build every screen against the mock data in `docs/mock/`
-- [ ] Connect each screen to the real endpoints
-- [ ] Live updates over Socket.io (people joining, a match landing)
+- [x] Build every screen against the mock data in `docs/mock/`
+- [x] Connect each screen to the real endpoints
+- [x] Live updates over Socket.io (people joining, a match landing)
 - [ ] Loading, empty, and error states on every screen
 - [ ] "Open directions" button hands off to the phone's maps app
 
@@ -78,6 +78,12 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 - [x] Send `member_joined` when someone joins
 - [x] Send `match_found` to every phone when a match happens
 - [x] Handle phones reconnecting (send current state on reconnect)
+
+**Group controls**
+- [x] Host-only filters and start, with `filters_changed` and `round_started` events
+- [x] Leave a group (`POST /groups/:id/leave`, `member_left`), host role passes on
+- [x] Progress per person (`progress` event), end the round early, closest picks (`GET /groups/:id/results`)
+- [x] Nudge, quick vote and a new round in the same group
 
 **Launch**
 - [ ] Host the server and database online so it works on real phones (Docker image and rate limits are ready; pick a host)
