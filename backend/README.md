@@ -38,7 +38,7 @@ The front end is a web app on a different address (for example `http://localhost
 
 ## Rate limits
 
-Join codes are only 4 digits, so one address is limited to 10 wrong join attempts a minute (successful joins don't count, so a whole table can join together), 20 new groups a minute, and 300 requests a minute overall. Over the limit the server answers `429` with `RATE_LIMITED`. Behind a host's proxy, set `TRUST_PROXY=1` so visitors are counted by their real address. Set `RATE_LIMIT=off` only for the load test or local testing.
+Join codes are only 4 digits, so one address is limited to 10 wrong join attempts a minute (successful joins don't count, so a whole table can join together), 20 new groups a minute, and 1200 requests a minute overall (six phones swiping fast on one Wi-Fi stay well under it). Over the limit the server answers `429` with `RATE_LIMITED`. Behind a host's proxy, set `TRUST_PROXY=1` so visitors are counted by their real address. Set `RATE_LIMIT=off` only for the load test or local testing.
 
 ## Run it in Docker
 

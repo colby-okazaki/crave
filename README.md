@@ -51,6 +51,7 @@ Updated as each pull request merges. Last updated: 2026-11-18.
 | Front end: leave (the host role passes on), live progress on the Waiting screen, nudge (with the "X nudged you" banner), end round early, closest picks, quick vote and a new round in the same group, all on the real server | Done, tested with three browsers against the server; not yet on a real phone |
 | Front end: loading, empty and error states on every screen, a "Waking up the server…" note when the free server is slow to answer, "Reconnecting…" when the live connection drops, and a logo placeholder for places without a photo (price and rating are hidden when unknown) | Done |
 | Front end: the Crave name and logo red (`#EE4135`) throughout, favicon, app icons and home-screen install (manifest), a splash while the app loads, and a style guide ([`docs/STYLE.md`](docs/STYLE.md)) | Done |
+| Back end: a join after an early end or a no match reopens the round and clears earlier votes, `member_joined` now says `reopened`, and the overall rate limit is 1200 a minute so a table on one Wi-Fi isn't cut off | Done, tested |
 | Both: API contract in [`docs/API.md`](docs/API.md), and the front end and back end agree on the 4-digit code format | Done |
 
 **Next**
