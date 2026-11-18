@@ -77,3 +77,29 @@ export function closestPicks(group: Group, stack: Restaurant[], limit = 3): { re
     .sort((a, b) => b.likes - a.likes)
     .slice(0, limit);
 }
+
+// Quick vote: once every current member has voted, the place with the most votes wins and
+// becomes the group's match. A tie goes to the place that was liked more, then the nearer one
+// (the order closestPicks returns). Returns null while someone is still to vote.
+export function decideVote(
+  group: Group,
+  stack: Restaurant[],
+): { winner: Restaurant; votes: Record<string, number> } | null {
+  const votes = group.votes;
+  if (group.match || !votes || group.members.length === 0) return null;
+  if (!group.members.every((m) => votes.has(m.id))) return null;
+  const tally: Record<string, number> = {};
+  for (const m of group.members) {
+    const pick = votes.get(m.id)!;
+    tally[pick] = (tally[pick] ?? 0) + 1;
+  }
+  const order = closestPicks(group, stack).map((p) => p.restaurantId);
+  const winnerId = Object.keys(tally).sort(
+    (a, b) => tally[b] - tally[a] || order.indexOf(a) - order.indexOf(b),
+  )[0];
+  const winner = stack.find((r) => r.id === winnerId);
+  if (!winner) return null;
+  group.match = winner;
+  group.exhausted = false;
+  return { winner, votes: tally };
+}

@@ -20,8 +20,11 @@ X-Member-Id: m_7f3a
 | Leave the group | `POST /groups/:id/leave` | OK |
 | End the round early (host) | `POST /groups/:id/end` | OK, and the match or `noMatch` |
 | Closest picks | `GET /groups/:id/results` | The places most people liked |
+| Nudge slow swipers | `POST /groups/:id/nudge` | OK and who was nudged |
+| Quick vote | `POST /groups/:id/vote` | OK, votes so far, and the winner once everyone voted |
+| New round, same group (host) | `POST /groups/:id/new-round` | OK and the filters |
 | Send a swipe | `POST /groups/:id/swipes` | OK, or a match if this swipe made one |
-| Live updates | Socket.io connection | `state`, `member_joined`, `member_left`, `progress`, `filters_changed`, `round_started`, `match_found`, `no_match` events |
+| Live updates | Socket.io connection | `state`, `member_joined`, `member_left`, `progress`, `nudged`, `vote_update`, `vote_result`, `round_reset`, `filters_changed`, `round_started`, `match_found`, `no_match` events |
 
 The join code is a **4-digit number sent as text** (for example `"0427"`, so keep any leading zero).
 
@@ -173,6 +176,38 @@ Response `200`:
 
 Up to 3 places someone liked, most likes first; ties keep the card order (nearest first). Only people still in the group count. Empty list if nobody liked anything. Use it for the "no match" screen.
 
+### Nudge
+
+`POST /groups/g_9c21/nudge` with your `X-Member-Id`
+
+```json
+{ "memberIds": ["m_b812", "m_c903"] }
+```
+
+Response `200`: `{ "ok": true, "nudged": ["m_b812", "m_c903"] }`. Every phone gets `nudged` with `{ "memberIds": [...], "from": { "id", "nickname" } }`; a phone shows the nudge only if its own ID is in `memberIds`.
+
+- Any member can nudge. You can't nudge yourself or people outside the group (`400 INVALID_INPUT`).
+- One nudge per person per minute. Anyone still cooling down is skipped; if everyone is, it's `429 NUDGE_COOLDOWN`.
+
+### Quick vote
+
+Opens when the round ended with no match (`noMatch` is true). Vote for one of the closest picks from `GET /groups/:id/results`.
+
+`POST /groups/g_9c21/vote` with your `X-Member-Id`: `{ "restaurantId": "r_001" }`
+
+Response `200`: `{ "ok": true, "votesIn": 2, "total": 3, "winner": null }`. Your first vote counts; sending another changes nothing.
+
+- Every phone gets `vote_update` `{ "votesIn": 2, "total": 3 }` after each vote.
+- When everyone has voted, every phone gets `vote_result` `{ "winner": { …match fields… }, "votes": { "r_001": 2, "r_004": 1 } }` and then `match_found` for the winner. Most votes wins; a tie goes to the place with more likes, then the nearer one. The winner becomes the group's match, so `state` carries it for phones that reconnect.
+- Someone leaving mid-vote doesn't hold it up.
+- Voting with no vote open is `409 NO_VOTE_OPEN`; a place that isn't one of the closest picks is `400 INVALID_INPUT`. `state` has `votesIn` for phones that join late.
+
+### New round in the same group (host only)
+
+`POST /groups/g_9c21/new-round` with the host's `X-Member-Id`. Optional body `{ "filters": { … } }` replaces the filters; leave it out to keep them.
+
+Response `200`: `{ "ok": true, "filters": { … } }`. Swipes, cards, the match and any vote are cleared, and every phone gets `round_reset` `{ "filters": { … } }` and goes back to the lobby. Filters can be changed again, and the host starts the round as before. Only the host (`403 NOT_HOST`).
+
 ### Send a swipe
 
 `POST /groups/g_9c21/swipes`
@@ -251,6 +286,8 @@ Every error uses the same shape, so the front end can show `message` directly:
 | `NO_RESTAURANTS` | 200 + empty list | Nothing matched the filters (not an error; show the "widen filters" screen) |
 | `RESTAURANTS_UNAVAILABLE` | 503 | The restaurant source is busy or down. Safe to retry; the next request tries again |
 | `RATE_LIMITED` | 429 | Too many wrong join codes (10 a minute), too many groups created (20 a minute), or too many requests overall (300 a minute) from one address. Show `message`; the `Retry-After` header says how many seconds to wait |
+| `NUDGE_COOLDOWN` | 429 | Nudged that person less than a minute ago |
+| `NO_VOTE_OPEN` | 409 | A quick vote only opens after a round with no match |
 | `NOT_HOST` | 403 | Only the host can change filters or start the round |
 | `ROUND_STARTED` | 409 | Filters can't change after the round started |
 | `SERVER_BUSY` | 503 | Every join code is in use (rare; try again shortly) |

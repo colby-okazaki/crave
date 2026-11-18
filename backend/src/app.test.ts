@@ -323,6 +323,132 @@ test("results lists the places most people liked, most likes first", async () =>
   assert.equal((await call("GET", `/groups/${groupId}/results`, undefined, "m_stranger")).status, 404);
 });
 
+test("nudging pings the person, refuses yourself and strangers, and allows once a minute", async () => {
+  const { groupId, ids } = await newGroup(3);
+  const socket = io(base, { auth: { groupId, memberId: ids[1] }, transports: ["websocket"] });
+  await new Promise((resolve) => socket.once("state", resolve));
+  const heard = new Promise<any>((resolve) => socket.once("nudged", resolve));
+
+  const nudge = (memberIds: unknown, who = ids[0]) => call("POST", `/groups/${groupId}/nudge`, { memberIds }, who);
+  assert.deepEqual((await nudge([ids[1]])).body, { ok: true, nudged: [ids[1]] });
+  const event = await heard;
+  assert.deepEqual(event.memberIds, [ids[1]]);
+  assert.equal(event.from.id, ids[0]);
+
+  const again = await nudge([ids[1]]);
+  assert.equal(again.status, 429);
+  assert.equal(again.body.error.code, "NUDGE_COOLDOWN");
+  // A different person is still fine, and the cooled-down one is skipped
+  assert.deepEqual((await nudge([ids[1], ids[2]])).body.nudged, [ids[2]]);
+
+  assert.equal((await nudge([ids[0]])).body.error.code, "INVALID_INPUT");
+  assert.equal((await nudge(["m_stranger"])).body.error.code, "INVALID_INPUT");
+  assert.equal((await nudge("everyone")).body.error.code, "INVALID_INPUT");
+  socket.disconnect();
+});
+
+// Three people, nobody matched: a likes {x, y}, b likes {x}, c likes {y}; the host then ends the round
+async function noMatchGroup() {
+  const g = await newGroup(3);
+  const [x, y] = g.restaurants.map((r) => r.id);
+  const swipe = (who: number, id: string, liked: boolean) =>
+    call("POST", `/groups/${g.groupId}/swipes`, { restaurantId: id, liked }, g.ids[who]);
+  await swipe(0, x, true);
+  await swipe(0, y, true);
+  await swipe(1, x, true);
+  await swipe(1, y, false);
+  await swipe(2, x, false);
+  await swipe(2, y, true);
+  await call("POST", `/groups/${g.groupId}/end`, {}, g.ids[0]);
+  return { ...g, x, y };
+}
+
+test("quick vote: counts votes live, and the winner becomes the match", async () => {
+  const { groupId, ids, x, y } = await noMatchGroup();
+  const socket = io(base, { auth: { groupId, memberId: ids[0] }, transports: ["websocket"] });
+  const state = await new Promise<any>((resolve) => socket.once("state", resolve));
+  assert.equal(state.noMatch, true);
+  const decided = new Promise<any>((resolve) => socket.once("vote_result", resolve));
+  const matched = new Promise<any>((resolve) => socket.once("match_found", resolve));
+  const vote = (who: number, id: string) => call("POST", `/groups/${groupId}/vote`, { restaurantId: id }, ids[who]);
+
+  assert.deepEqual((await vote(0, y)).body, { ok: true, votesIn: 1, total: 3, winner: null });
+  // First vote counts: changing your mind is ignored
+  assert.equal((await vote(0, x)).body.votesIn, 1);
+  assert.equal((await vote(1, y)).body.votesIn, 2);
+  const last = await vote(2, x);
+  assert.deepEqual(last.body, { ok: true, votesIn: 3, total: 3, winner: { restaurantId: y } });
+  assert.deepEqual((await decided).votes, { [y]: 2, [x]: 1 });
+  assert.equal((await decided).winner.id, y);
+  assert.equal((await matched).restaurant.id, y);
+
+  // The group now has a match, and a phone that reconnects sees it
+  const late = io(base, { auth: { groupId, memberId: ids[1] }, transports: ["websocket"] });
+  const after = await new Promise<any>((resolve) => late.once("state", resolve));
+  assert.equal(after.match.restaurant.id, y);
+  assert.equal(after.noMatch, false);
+  late.disconnect();
+  socket.disconnect();
+});
+
+test("quick vote only opens after a no-match, for the closest picks", async () => {
+  const early = await newGroup(2);
+  const tooSoon = await call("POST", `/groups/${early.groupId}/vote`, { restaurantId: early.restaurants[0].id }, early.ids[0]);
+  assert.equal(tooSoon.status, 409);
+  assert.equal(tooSoon.body.error.code, "NO_VOTE_OPEN");
+
+  const { groupId, ids, restaurants } = await noMatchGroup();
+  const notAPick = restaurants.find((r) => r.id !== restaurants[0].id && r.id !== restaurants[1].id);
+  if (notAPick) {
+    assert.equal((await call("POST", `/groups/${groupId}/vote`, { restaurantId: notAPick.id }, ids[0])).body.error.code, "INVALID_INPUT");
+  }
+  assert.equal((await call("POST", `/groups/${groupId}/vote`, {}, ids[0])).body.error.code, "INVALID_INPUT");
+});
+
+test("a leaver who hadn't voted yet doesn't hold the vote up", async () => {
+  const { groupId, ids, x } = await noMatchGroup();
+  const matched = new Promise<any>((resolve) => {
+    const socket = io(base, { auth: { groupId, memberId: ids[0] }, transports: ["websocket"] });
+    socket.once("match_found", (m) => { socket.disconnect(); resolve(m); });
+  });
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  await call("POST", `/groups/${groupId}/vote`, { restaurantId: x }, ids[0]);
+  await call("POST", `/groups/${groupId}/vote`, { restaurantId: x }, ids[1]);
+  await call("POST", `/groups/${groupId}/leave`, {}, ids[2]);
+  assert.equal((await matched).restaurant.id, x);
+});
+
+test("the host can start a new round in the same group", async () => {
+  const { groupId, ids, restaurants } = await newGroup(2);
+  const socket = io(base, { auth: { groupId, memberId: ids[1] }, transports: ["websocket"] });
+  await new Promise((resolve) => socket.once("state", resolve));
+  const heard = new Promise<any>((resolve) => socket.once("round_reset", resolve));
+
+  for (const id of ids) await call("POST", `/groups/${groupId}/swipes`, { restaurantId: restaurants[0].id, liked: true }, id);
+  await call("POST", `/groups/${groupId}/start`, {}, ids[0]);
+
+  assert.equal((await call("POST", `/groups/${groupId}/new-round`, {}, ids[1])).body.error.code, "NOT_HOST");
+  const filters = { radiusMeters: 5000 };
+  assert.deepEqual((await call("POST", `/groups/${groupId}/new-round`, { filters }, ids[0])).body, { ok: true, filters });
+  assert.deepEqual((await heard).filters, filters);
+
+  // Back in the lobby: nothing swiped, no match, filters editable again, fresh cards
+  const late = io(base, { auth: { groupId, memberId: ids[1] }, transports: ["websocket"] });
+  const state = await new Promise<any>((resolve) => late.once("state", resolve));
+  assert.equal(state.started, false);
+  assert.equal(state.match, null);
+  assert.equal(state.noMatch, false);
+  assert.equal(state.progress[0].swiped, 0);
+  assert.equal((await call("PATCH", `/groups/${groupId}/filters`, { filters: { radiusMeters: 2000 } }, ids[0])).status, 200);
+  const fresh = await call("GET", `/groups/${groupId}/restaurants`, undefined, ids[0]);
+  assert.ok(fresh.body.restaurants.length > 0);
+  // The old match is gone: liking the same place again is a new swipe
+  const again = await call("POST", `/groups/${groupId}/swipes`, { restaurantId: fresh.body.restaurants[0].id, liked: true }, ids[0]);
+  assert.equal(again.body.match, null);
+  late.disconnect();
+  socket.disconnect();
+});
+
 test("if finding restaurants fails, the next request tries again", async () => {
   let calls = 0;
   const flaky = {

@@ -1,13 +1,13 @@
 import cors from "cors";
 import express, { type ErrorRequestHandler } from "express";
 import { corsOrigin } from "./cors.js";
-import { ApiError, createGroup, findGroupForMember, isHost, joinGroup, leaveGroup, progressOf, type Filters, type Group } from "./groups.js";
+import { ApiError, createGroup, findGroupForMember, isHost, joinGroup, leaveGroup, progressOf, resetRound, type Filters, type Group } from "./groups.js";
 import { emitToGroup } from "./live.js";
 import { placeFinder, restaurantProvider } from "./providers.js";
 import type { PlaceFinder } from "./places.js";
 import type { Restaurant, RestaurantProvider } from "./restaurants.js";
 import { createLimiters } from "./ratelimit.js";
-import { closestPicks, isExhausted, matchAfterLeave, matchPayload, recordSwipe } from "./swipes.js";
+import { closestPicks, decideVote, isExhausted, matchAfterLeave, matchPayload, recordSwipe } from "./swipes.js";
 
 function invalid(message: string): never {
   throw new ApiError(400, "INVALID_INPUT", message);
@@ -64,6 +64,16 @@ function hostGroup(groupId: string, memberId: string): Group {
   if (!isHost(group, memberId)) throw new ApiError(403, "NOT_HOST", "Only the host can do that.");
   return group;
 }
+
+// If a quick vote is open and everyone left has voted, announce the winner to the group
+function announceVote(group: Group, stack: Restaurant[]) {
+  const decided = decideVote(group, stack);
+  if (!decided) return;
+  emitToGroup(group.id, "vote_result", { winner: matchPayload(decided.winner), votes: decided.votes });
+  emitToGroup(group.id, "match_found", { restaurant: matchPayload(decided.winner) });
+}
+
+const NUDGE_COOLDOWN_MS = 60_000;
 
 export function buildApp(provider: RestaurantProvider = restaurantProvider, finder: PlaceFinder = placeFinder) {
   const app = express();
@@ -141,6 +151,7 @@ export function buildApp(provider: RestaurantProvider = restaurantProvider, find
     const stack = await (group.restaurants ?? Promise.resolve([] as Restaurant[])).catch(() => [] as Restaurant[]);
     const match = matchAfterLeave(group, stack);
     if (match) emitToGroup(group.id, "match_found", { restaurant: matchPayload(match) });
+    announceVote(group, stack);
     const exhausted = isExhausted(group, stack.length);
     if (exhausted && !group.exhausted) emitToGroup(group.id, "no_match", {});
     group.exhausted = exhausted;
@@ -157,6 +168,73 @@ export function buildApp(provider: RestaurantProvider = restaurantProvider, find
       emitToGroup(group.id, "no_match", {});
     }
     res.json({ ok: true, match: group.match ? { restaurantId: group.match.id } : null, noMatch: !group.match });
+  });
+
+  // Ping people who are slow to swipe. Anyone can nudge, once a minute per person.
+  app.post("/groups/:id/nudge", (req, res) => {
+    const memberId = req.header("X-Member-Id") ?? "";
+    const group = findGroupForMember(req.params.id, memberId);
+    if (!group) {
+      throw new ApiError(404, "GROUP_NOT_FOUND", "That code doesn't match an open group.");
+    }
+    const ids = req.body?.memberIds;
+    if (!Array.isArray(ids) || ids.length === 0 || ids.length > 50 || !ids.every((i: unknown) => typeof i === "string")) {
+      invalid("memberIds must be a list of member IDs.");
+    }
+    const targets = [...new Set<string>(ids)].filter((id) => id !== memberId && group.members.some((m) => m.id === id));
+    if (targets.length === 0) invalid("Pick someone else in the group to nudge.");
+    const now = Date.now();
+    group.nudges ??= new Map();
+    if (targets.every((t) => now - (group.nudges!.get(`${memberId}>${t}`) ?? 0) < NUDGE_COOLDOWN_MS)) {
+      throw new ApiError(429, "NUDGE_COOLDOWN", "You just nudged them. Give it a minute.");
+    }
+    // Skip anyone nudged in the last minute, nudge the rest
+    const fresh = targets.filter((t) => now - (group.nudges!.get(`${memberId}>${t}`) ?? 0) >= NUDGE_COOLDOWN_MS);
+    for (const t of fresh) group.nudges.set(`${memberId}>${t}`, now);
+    const from = group.members.find((m) => m.id === memberId)!;
+    emitToGroup(group.id, "nudged", { memberIds: fresh, from: { id: from.id, nickname: from.nickname } });
+    res.json({ ok: true, nudged: fresh });
+  });
+
+  // Quick vote after a no-match: pick one of the closest picks. First vote counts.
+  app.post("/groups/:id/vote", async (req, res) => {
+    const memberId = req.header("X-Member-Id") ?? "";
+    const group = findGroupForMember(req.params.id, memberId);
+    if (!group) {
+      throw new ApiError(404, "GROUP_NOT_FOUND", "That code doesn't match an open group.");
+    }
+    if (group.match || !group.exhausted) {
+      throw new ApiError(409, "NO_VOTE_OPEN", "A vote only opens when the round ends with no match.");
+    }
+    const stack = group.restaurants ? await group.restaurants : [];
+    const picks = closestPicks(group, stack);
+    const restaurantId = req.body?.restaurantId;
+    if (typeof restaurantId !== "string" || !picks.some((p) => p.restaurantId === restaurantId)) {
+      invalid("Vote for one of the closest picks.");
+    }
+    group.votes ??= new Map();
+    if (!group.votes.has(memberId)) {
+      group.votes.set(memberId, restaurantId);
+      emitToGroup(group.id, "vote_update", { votesIn: group.votes.size, total: group.members.length });
+    }
+    announceVote(group, stack);
+    // announceVote may have just set the match, which TypeScript can't see from here
+    const decided = (group as Group).match;
+    res.json({
+      ok: true,
+      votesIn: group.votes.size,
+      total: group.members.length,
+      winner: decided ? { restaurantId: decided.id } : null,
+    });
+  });
+
+  // Host starts the same group over (cards and swipes cleared, back in the lobby)
+  app.post("/groups/:id/new-round", (req, res) => {
+    const group = hostGroup(req.params.id, req.header("X-Member-Id") ?? "");
+    const filters = req.body?.filters === undefined ? undefined : readFilters(req.body.filters);
+    resetRound(group, filters);
+    emitToGroup(group.id, "round_reset", { filters: group.filters });
+    res.json({ ok: true, filters: group.filters });
   });
 
   // For the "no match" screen: the places the most people liked

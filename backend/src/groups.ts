@@ -32,6 +32,10 @@ export interface Group {
   exhausted?: boolean;
   // How many places are in the stack, once it has been fetched (for progress)
   stackSize?: number;
+  // Quick vote after a no-match: memberId -> restaurantId (a member's first vote counts)
+  votes?: Map<string, string>;
+  // Last nudge time per "from>to" pair, so nobody gets pinged more than once a minute
+  nudges?: Map<string, number>;
   createdAt: number;
 }
 
@@ -147,6 +151,7 @@ export function joinGroup(joinCode: string, nickname: string) {
 export function leaveGroup(group: Group, memberId: string): { hostId: string | null; closed: boolean } {
   group.members = group.members.filter((m) => m.id !== memberId);
   for (const votes of group.swipes.values()) votes.delete(memberId);
+  group.votes?.delete(memberId);
   if (group.members.length === 0) {
     groupsById.delete(group.id);
     groupsByCode.delete(group.joinCode);
@@ -164,4 +169,16 @@ export function progressOf(group: Group): { memberId: string; swiped: number; to
     for (const votes of group.swipes.values()) if (votes.has(m.id)) swiped++;
     return { memberId: m.id, swiped, total };
   });
+}
+
+// Starts the same group over: everyone back in the lobby with nothing swiped. Filters can change again.
+export function resetRound(group: Group, filters?: Filters) {
+  group.swipes = new Map();
+  group.restaurants = undefined;
+  group.stackSize = undefined;
+  group.match = undefined;
+  group.exhausted = false;
+  group.started = false;
+  group.votes = undefined;
+  if (filters) group.filters = filters;
 }
