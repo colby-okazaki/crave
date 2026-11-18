@@ -12,7 +12,7 @@ A group of friends can't agree on where to eat. Everyone swipes yes or no on nea
 | Front end | **React 19**, **Vite**, React Router, CSS modules (a mobile-first web app) |
 | Back end | **Node.js 24**, **Express 5**, **Socket.io** for live updates |
 | Data | In-memory groups for now (database planned); real restaurants and place search from free **OpenStreetMap** services (Nominatim, with Overpass as backup), or fake data for offline work |
-| Testing | Node's built-in test runner (56 tests, `npm test`), plus a load test (`npm run loadtest`) |
+| Testing | Node's built-in test runner (62 tests, `npm test`), plus a load test (`npm run loadtest`) |
 | Tooling | Docker image for the server, rate limiting, GitHub pull requests |
 
 Back end numbers, measured by a script in this repo: 1,200 phones connected at once with 0 failures. See [`STATS.md`](STATS.md).
@@ -41,6 +41,7 @@ Updated as each pull request merges. Last updated: 2026-11-17.
 | Back end: swipes, match logic (everyone must say yes), `match_found` and `no_match` events | Done, tested |
 | Back end: rate limits on joining and creating groups, Docker setup for hosting | Done |
 | Back end: real restaurant data from OpenStreetMap (free, no key), switched on with `RESTAURANT_SOURCE=osm` | Done, tried live: 20 places in about 1.4 s. No prices or ratings, and photos and hours only for some places, so the front end must handle empty fields |
+| Back end: Google Places as an optional source (`RESTAURANT_SOURCE=google`): a real photo, price and rating on each card, photos served through our server so the key stays private, falls back to OpenStreetMap if Google fails | Done, tested with a fake Google. Needs a key to go live ([`docs/DEPLOY.md`](docs/DEPLOY.md)) |
 | Back end: place search, so a typed location becomes coordinates (`GET /geocode`) | Done, tried live |
 | Back end: load tested | 1,200 phones connected at once, 0 failures ([`STATS.md`](STATS.md)) |
 | Back end: nudge (once a minute per person), quick vote after a no-match (winner becomes the match), and a new round in the same group | Done, tested |
