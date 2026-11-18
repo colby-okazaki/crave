@@ -1,5 +1,7 @@
 # Putting Crave online
 
+Crave is live on Render: the app is at https://crave-app-ykml.onrender.com and the server at https://crave-backend-43ve.onrender.com. The steps below are how it was set up. Render added a random suffix to both names, so the first guess for `CORS_ORIGIN` and `VITE_API_URL` was wrong and had to be replaced with the real addresses.
+
 The repo is set up for [Render](https://render.com): it runs the Docker image, supports the live connections Socket.io needs, and has a free plan. Any host that runs a Docker image and supports websockets works the same way: use the settings below.
 
 > **Free plan catch:** free servers usually go to sleep after a while with no traffic and take a short time to wake up, and a sleep or restart ends every open group (groups live in memory). Fine for testing; for a real dinner, open the app a minute early, or pay for an always-on plan. Check the host's current free-plan terms before relying on it.

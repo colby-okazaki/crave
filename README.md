@@ -29,12 +29,13 @@ The full task split is in [`TASKS.md`](TASKS.md). Measured numbers for the resum
 
 ## Status
 
-Updated as each pull request merges. Last updated: 2026-11-14.
+Updated as each pull request merges. Last updated: 2026-11-17.
 
 **Done so far**
 
 | Area | State |
 | --- | --- |
+| Online on Render (free plan): app at https://crave-app-ykml.onrender.com, server at https://crave-backend-43ve.onrender.com | Live. Tried with two players: create, join, start, both like one place, match arrives in about 0.2 s. Free servers sleep when idle, so the first visit can be slow, and a restart ends open groups |
 | Back end: create and join a group (4-digit codes), live member updates, old groups cleaned up | Done |
 | Back end: restaurants endpoint | Done, fake data by default |
 | Back end: swipes, match logic (everyone must say yes), `match_found` and `no_match` events | Done, tested |
@@ -53,7 +54,7 @@ Updated as each pull request merges. Last updated: 2026-11-14.
 | Area | Owner |
 | --- | --- |
 | Front end: call the new leave, nudge, vote, end-round, results and new-round endpoints (see [`docs/API.md`](docs/API.md)), try it on a real phone, fix the brand red and name | Davin |
-| Back end: host the server online (config and steps ready: [`render.yaml`](render.yaml), [`docs/DEPLOY.md`](docs/DEPLOY.md); needs a Render account), add a database | Colby |
+| Back end: add a database so groups survive restarts and sleep (hosting steps: [`docs/DEPLOY.md`](docs/DEPLOY.md)) | Colby |
 | Both: test with a real group at dinner | Both |
 
 ## Run it locally
