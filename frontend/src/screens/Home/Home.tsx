@@ -1,6 +1,6 @@
 import { Button } from "../../components/Button/Button";
 import { Screen, Spacer } from "../../components/Screen/Screen";
-import pinIcon from "../../assets/icons/pin.svg";
+import logoMark from "../../assets/logo-mark-white.svg";
 import styles from "./Home.module.css";
 
 type HomeProps = {
@@ -20,9 +20,9 @@ export function Home({ locationLabel, notice, onCreateGroup, onJoinWithCode, onC
       <Spacer />
 
       <div className={styles.appIcon}>
-        <img src={pinIcon} width={40} height={40} alt="" />
+        <img src={logoMark} width={52} height={48} alt="" />
       </div>
-      <p className={styles.eyebrow}>Restaurant Decider</p>
+      <p className={styles.eyebrow}>Crave</p>
       <h1 className={styles.title}>Can't decide where to eat?</h1>
       <p className={styles.body}>
         Swipe on nearby spots with your friends. When everyone likes the same place, it's a match.
