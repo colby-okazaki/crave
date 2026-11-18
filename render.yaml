@@ -11,8 +11,12 @@ services:
     plan: free
     healthCheckPath: /health
     envVars:
+      # google gives every card a real photo, price and rating. It needs the key below; with no key
+      # (or if Google fails) the server falls back to OpenStreetMap on its own.
       - key: RESTAURANT_SOURCE
-        value: osm
+        value: google
+      - key: GOOGLE_PLACES_API_KEY
+        sync: false # paste it in Render's dashboard, never in this file
       - key: TRUST_PROXY
         value: "1"
       - key: CORS_ORIGIN

@@ -172,7 +172,7 @@ export function matchesCuisine(r: Restaurant, filters: Filters): boolean {
   return has.some((c) => wanted.includes(c));
 }
 
-function distanceMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+export function distanceMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const rad = (d: number) => (d * Math.PI) / 180;
   const h =
     Math.sin(rad(b.lat - a.lat) / 2) ** 2 +

@@ -39,3 +39,19 @@ Leave `RATE_LIMIT` unset online (it's only turned off for load tests).
 
 - **A database** so groups survive restarts and sleep. The store is in memory today; `backend/src/groups.ts` is the one place to swap.
 - A custom domain, and a paid always-on plan.
+
+## Real photos with Google Places
+
+OpenStreetMap has almost no photos (none in a test of 80 places), so for photos on every card use Google Places. It's billed per request, so set it up with a spending cap.
+
+1. In [Google Cloud](https://console.cloud.google.com), use a project on your own account (a school or work organization may block API keys).
+2. Turn on billing, then **set a budget with an alert and a cap**. Check the current Places API pricing and free monthly credit on Google's pricing page first.
+3. Enable **Places API (New)** and create an API key. Under "API restrictions", limit the key to Places API (New).
+4. In Render, open `crave-backend`, then **Environment**, and paste the key into `GOOGLE_PLACES_API_KEY`. `render.yaml` already sets `RESTAURANT_SOURCE` to `google` (a blueprint overwrites values edited by hand, so change it in the file, not the dashboard). Never put the key in GitHub or send it in chat.
+5. Check a group's cards: each should have a `photoUrl` that starts with the server's address.
+
+How it behaves:
+- Photos load through the server (`/photos/...`), so the key never reaches phones. The server keeps each photo for an hour so a table of phones costs one Google request, not six.
+- If Google errors or the quota runs out, the server falls back to OpenStreetMap, so the app keeps working (without photos).
+- Price and rating appear when Google has them, so the front end's price filter starts working.
+- Google's terms limit how long place data may be stored. Groups keep their cards in memory for the group's life (up to 24 hours), so read their current terms if this goes beyond a school project.

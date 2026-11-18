@@ -1,9 +1,9 @@
 import cors from "cors";
-import express, { type ErrorRequestHandler } from "express";
+import express, { type ErrorRequestHandler, type RequestHandler } from "express";
 import { corsOrigin } from "./cors.js";
 import { ApiError, createGroup, findGroupForMember, isHost, joinGroup, leaveGroup, progressOf, resetRound, type Filters, type Group } from "./groups.js";
 import { emitToGroup } from "./live.js";
-import { placeFinder, restaurantProvider } from "./providers.js";
+import { photoHandler as defaultPhotoHandler, placeFinder, restaurantProvider } from "./providers.js";
 import type { PlaceFinder } from "./places.js";
 import type { Restaurant, RestaurantProvider } from "./restaurants.js";
 import { createLimiters } from "./ratelimit.js";
@@ -75,13 +75,19 @@ function announceVote(group: Group, stack: Restaurant[]) {
 
 const NUDGE_COOLDOWN_MS = 60_000;
 
-export function buildApp(provider: RestaurantProvider = restaurantProvider, finder: PlaceFinder = placeFinder) {
+export function buildApp(
+  provider: RestaurantProvider = restaurantProvider,
+  finder: PlaceFinder = placeFinder,
+  photoHandler: RequestHandler | undefined = defaultPhotoHandler,
+) {
   const app = express();
   // Behind a host's proxy, set TRUST_PROXY to how many proxies sit in front (usually 1)
   // so limits count each visitor's real address instead of the proxy's
   if (process.env.TRUST_PROXY) app.set("trust proxy", Number(process.env.TRUST_PROXY));
   const limits = createLimiters();
   app.use(cors({ origin: corsOrigin }));
+  // Photos have their own, bigger limit and don't count toward the general one
+  if (photoHandler) app.get("/photos/:placeId/:photoId", limits.photos, photoHandler);
   app.use(limits.general);
   app.use(express.json());
 
