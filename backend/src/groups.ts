@@ -185,3 +185,50 @@ export function resetRound(group: Group, filters?: Filters) {
   group.votes = undefined;
   if (filters) group.filters = filters;
 }
+
+// ---- Saving and restoring (see persist.ts) ----
+
+// A group as plain JSON: the Maps become lists and the card stack is the finished list
+export interface SavedGroup extends Omit<Group, "swipes" | "votes" | "nudges" | "restaurants"> {
+  swipes: [string, [string, boolean][]][];
+  votes?: [string, string][];
+  nudges?: [string, number][];
+  restaurants?: Restaurant[];
+}
+
+export async function exportGroups(now = Date.now()): Promise<SavedGroup[]> {
+  const out: SavedGroup[] = [];
+  for (const group of groupsById.values()) {
+    if (isExpired(group, now)) continue;
+    const { swipes, votes, nudges, restaurants, ...rest } = group;
+    // A search still running (or failed) is left out; it is fetched again on the next request
+    const stack = restaurants ? await restaurants.catch(() => undefined) : undefined;
+    out.push({
+      ...rest,
+      swipes: [...swipes].map(([place, who]) => [place, [...who]]),
+      votes: votes && [...votes],
+      nudges: nudges && [...nudges],
+      restaurants: stack,
+    });
+  }
+  return out;
+}
+
+export function importGroups(saved: SavedGroup[], now = Date.now()): number {
+  let loaded = 0;
+  for (const g of saved) {
+    const { swipes, votes, nudges, restaurants, ...rest } = g;
+    const group: Group = {
+      ...rest,
+      swipes: new Map(swipes.map(([place, who]) => [place, new Map(who)])),
+      votes: votes && new Map(votes),
+      nudges: nudges && new Map(nudges),
+      restaurants: restaurants && Promise.resolve(restaurants),
+    };
+    if (isExpired(group, now)) continue;
+    groupsById.set(group.id, group);
+    groupsByCode.set(group.joinCode, group);
+    loaded++;
+  }
+  return loaded;
+}

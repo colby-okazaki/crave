@@ -37,8 +37,16 @@ Leave `RATE_LIMIT` unset online (it's only turned off for load tests).
 
 ## Later
 
-- **A database** so groups survive restarts and sleep. The store is in memory today; `backend/src/groups.ts` is the one place to swap.
 - A custom domain, and a paid always-on plan.
+
+## Keeping groups across restarts
+
+By default groups live in memory, so a restart, a redeploy or the free plan's sleep ends every open group. Set one of these on `crave-backend` to keep them:
+
+- **`DATABASE_URL`** (recommended online): a Postgres address. Render's free Postgres works (New > PostgreSQL, then copy its **Internal Database URL**; check its current free-plan limits, it has expired after 30 days before), or use Neon or Supabase. The server makes its own table, `crave_state`, and keeps every open group in one row.
+- **`DATA_FILE`**: a file path, for a machine with a disk that persists. Render's free plan wipes its disk on every restart, so this only helps locally or on a paid disk.
+
+The server saves every 5 seconds when something changed and once more when the host tells it to stop, then reloads on start (logs `Restored N open groups.`). Phones reconnect on their own and carry on. At most the last few seconds of swipes can be lost on a hard crash. Groups still close after 24 hours. Tested with a file store and a real restart; the Postgres path is not tried against a live database yet.
 
 ## Real photos with Google Places
 

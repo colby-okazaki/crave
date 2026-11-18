@@ -22,7 +22,7 @@ Copy `.env.example` to `.env` and fill it in. The server reads `.env` on start. 
 
 ## Stack
 
-TypeScript, Node.js, Express, Socket.io. Groups live in memory for now (they reset when the server restarts); a database comes later. Swipes and match logic are built; real restaurant data is not.
+TypeScript, Node.js, Express, Socket.io. Groups live in memory, and are saved to Postgres (`DATABASE_URL`) or a file (`DATA_FILE`) when set so they survive restarts (see `docs/DEPLOY.md`). Swipes and match logic are built; real restaurant data is not.
 
 ## Run it locally
 

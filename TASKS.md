@@ -87,6 +87,7 @@ About 8 weeks to a working first version. Stretch or shrink to fit your schedule
 - [x] Nudge, quick vote and a new round in the same group
 
 **Launch**
-- [x] Host the server online so it works on real phones (live on Render, see the README; a database is still to do so groups survive restarts)
+- [x] Save groups so a restart doesn't end them (Postgres or file; needs `DATABASE_URL` set on Render)
+- [x] Host the server online so it works on real phones (live on Render, see the README; groups survive restarts once `DATABASE_URL` is set)
 - [x] Share the live base URL with Davin (in the README)
 - [ ] Fix what breaks during the dinner test
