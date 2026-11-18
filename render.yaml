@@ -1,0 +1,33 @@
+# One-click setup for Render (https://render.com): New > Blueprint > pick this repo.
+# Two things can't be filled in ahead of time because they are each other's address:
+# set CORS_ORIGIN on the back end and VITE_API_URL on the front end after the first deploy.
+# Full steps: docs/DEPLOY.md
+services:
+  - type: web
+    name: crave-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: RESTAURANT_SOURCE
+        value: osm
+      - key: TRUST_PROXY
+        value: "1"
+      - key: CORS_ORIGIN
+        sync: false # the front end's address, e.g. https://crave-app.onrender.com
+
+  - type: web
+    name: crave-app
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    routes:
+      # Every path serves the app, so invite links like /join?code=1234 and refreshes work
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        sync: false # the back end's address, e.g. https://crave-backend.onrender.com
