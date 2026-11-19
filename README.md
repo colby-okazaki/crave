@@ -43,7 +43,7 @@ Updated as each pull request merges. Last updated: 2026-11-18.
 | Back end: real restaurant data from OpenStreetMap (free, no key), switched on with `RESTAURANT_SOURCE=osm` | Done, tried live: 20 places in about 1.4 s. No prices or ratings, and photos and hours only for some places, so the front end must handle empty fields |
 | Back end: Google Places as an optional source (`RESTAURANT_SOURCE=google`): a real photo, price and rating on each card, photos served through our server so the key stays private, falls back to OpenStreetMap if Google fails | Done, tested with a fake Google. Needs a key to go live ([`docs/DEPLOY.md`](docs/DEPLOY.md)) |
 | Back end: place search, so a typed location becomes coordinates (`GET /geocode`) | Done, tried live |
-| Back end: load tested | 1,200 phones connected at once, 0 failures ([`STATS.md`](STATS.md)) |
+| Back end: load tested | 1,200 phones connected at once, 0 failures, rerun 2026-11-19 with the full server; 64 automated tests ([`STATS.md`](STATS.md)) |
 | Back end: nudge (once a minute per person), quick vote after a no-match (winner becomes the match), and a new round in the same group | Done, tested |
 | Back end: progress per person, end round early, closest picks; search radius up to 20 miles; the front end's cuisine names (burgers, boba, middle eastern…) now match OpenStreetMap's words | Done, tested |
 | Back end: host-only filters and start, `hostId` in `state`, and leaving a group (the leaver's votes go, the host role passes on, the rest can still match) | Done, tested |
