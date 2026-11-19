@@ -41,7 +41,7 @@ Updated as each pull request merges. Last updated: 2026-11-18.
 | Back end: swipes, match logic (everyone must say yes), `match_found` and `no_match` events | Done, tested |
 | Back end: rate limits on joining and creating groups, Docker setup for hosting | Done |
 | Back end: real restaurant data from OpenStreetMap (free, no key), switched on with `RESTAURANT_SOURCE=osm` | Done, tried live: 20 places in about 1.4 s. No prices or ratings, and photos and hours only for some places, so the front end must handle empty fields |
-| Back end: Google Places as an optional source (`RESTAURANT_SOURCE=google`): a real photo, price and rating on each card, photos served through our server so the key stays private, falls back to OpenStreetMap if Google fails | Done, tested with a fake Google. Needs a key to go live ([`docs/DEPLOY.md`](docs/DEPLOY.md)) |
+| Back end: Google Places as an optional source (`RESTAURANT_SOURCE=google`): a real photo, price and rating on each card, photos served through our server so the key stays private, falls back to OpenStreetMap if Google fails | Live on Render: prices, ratings and hours show. Photos don't show yet; the server logs what Google sends for photos to find out why ([`docs/DEPLOY.md`](docs/DEPLOY.md)) |
 | Back end: place search, so a typed location becomes coordinates (`GET /geocode`) | Done, tried live |
 | Back end: load tested | 1,200 phones connected at once, 0 failures, rerun 2026-11-19 with the full server; 64 automated tests ([`STATS.md`](STATS.md)) |
 | Back end: nudge (once a minute per person), quick vote after a no-match (winner becomes the match), and a new round in the same group | Done, tested |
@@ -60,6 +60,7 @@ Updated as each pull request merges. Last updated: 2026-11-18.
 | Area | Owner |
 | --- | --- |
 | Front end: try it on a real phone; test the design with 3 to 5 people | Davin |
+| Back end: find out why Google photos don't show (read the `Google sent...` line in the `crave-backend` logs)  | Colby |
 | Back end: set `DATABASE_URL` on Render (free Postgres) so groups survive restarts and sleep ([`docs/DEPLOY.md`](docs/DEPLOY.md)) | Colby |
 | Both: test with a real group at dinner | Both |
 
