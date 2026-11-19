@@ -11,7 +11,7 @@ A group of friends can't agree on where to eat. Everyone swipes yes or no on nea
 | Language | **TypeScript** on both the front end and the back end |
 | Front end | **React 19**, **Vite**, React Router, CSS modules (a mobile-first web app) |
 | Back end | **Node.js 24**, **Express 5**, **Socket.io** for live updates |
-| Data | In-memory groups for now (database planned); real restaurants and place search from free **OpenStreetMap** services (Nominatim, with Overpass as backup), or fake data for offline work |
+| Data | In-memory groups, saved to Postgres or a file when `DATABASE_URL` / `DATA_FILE` is set so they survive restarts; real restaurants and place search from free **OpenStreetMap** services (Nominatim, with Overpass as backup), or fake data for offline work |
 | Testing | Node's built-in test runner (62 tests, `npm test`), plus a load test (`npm run loadtest`) |
 | Tooling | Docker image for the server, rate limiting, GitHub pull requests |
 
@@ -52,6 +52,7 @@ Updated as each pull request merges. Last updated: 2026-11-18.
 | Front end: loading, empty and error states on every screen, a "Waking up the server…" note when the free server is slow to answer, "Reconnecting…" when the live connection drops, and a logo placeholder for places without a photo (price and rating are hidden when unknown) | Done |
 | Front end: the Crave name and logo red (`#EE4135`) throughout, favicon, app icons and home-screen install (manifest), a splash while the app loads, and a style guide ([`docs/STYLE.md`](docs/STYLE.md)) | Done |
 | Back end: a join after an early end or a no match reopens the round and clears earlier votes, `member_joined` now says `reopened`, and the overall rate limit is 1200 a minute so a table on one Wi-Fi isn't cut off | Done, tested |
+| Back end: open groups are saved (Postgres via `DATABASE_URL`, or a file via `DATA_FILE`) every few seconds and on shutdown, and restored on start | Done, tested with a real restart on a file. Postgres code not tried against a live database yet |
 | Both: API contract in [`docs/API.md`](docs/API.md), and the front end and back end agree on the 4-digit code format | Done |
 
 **Next**
@@ -59,7 +60,7 @@ Updated as each pull request merges. Last updated: 2026-11-18.
 | Area | Owner |
 | --- | --- |
 | Front end: try it on a real phone; test the design with 3 to 5 people | Davin |
-| Back end: add a database so groups survive restarts and sleep (hosting steps: [`docs/DEPLOY.md`](docs/DEPLOY.md)) | Colby |
+| Back end: set `DATABASE_URL` on Render (free Postgres) so groups survive restarts and sleep ([`docs/DEPLOY.md`](docs/DEPLOY.md)) | Colby |
 | Both: test with a real group at dinner | Both |
 
 ## Run it locally

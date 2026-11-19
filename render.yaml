@@ -17,6 +17,8 @@ services:
         value: google
       - key: GOOGLE_PLACES_API_KEY
         sync: false # paste it in Render's dashboard, never in this file
+      - key: DATABASE_URL
+        sync: false # optional: a Postgres address, so groups survive restarts (docs/DEPLOY.md)
       - key: TRUST_PROXY
         value: "1"
       - key: CORS_ORIGIN
