@@ -5,6 +5,7 @@ import { ApiError, createGroup, findGroupForMember, isHost, joinGroup, leaveGrou
 import { emitToGroup } from "./live.js";
 import { photoHandler as defaultPhotoHandler, placeFinder, restaurantProvider } from "./providers.js";
 import type { PlaceFinder } from "./places.js";
+import { photoCheck } from "./google.js";
 import type { Restaurant, RestaurantProvider } from "./restaurants.js";
 import { createLimiters } from "./ratelimit.js";
 import { closestPicks, decideVote, isExhausted, matchAfterLeave, matchPayload, recordSwipe } from "./swipes.js";
@@ -92,7 +93,9 @@ export function buildApp(
   app.use(express.json());
 
   app.get("/health", (_req, res) => {
-    res.json({ ok: true });
+    // photoCheck is only there once a Google search has run (temporary, to debug missing photos)
+    const google = photoCheck();
+    res.json(google ? { ok: true, google } : { ok: true });
   });
 
   // Typed location -> coordinates, for the screen where someone picks where to eat
