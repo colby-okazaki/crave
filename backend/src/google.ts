@@ -155,12 +155,25 @@ export function createGoogleProvider(options: Options): RestaurantProvider {
 // Says in the logs how many places came with photos and what their names look like, so a
 // "no photos" problem can be told apart from "Google sent none" (no key or secrets are logged)
 let loggedShape = 0;
+let lastCheck: { places: number; withPhotos: number; nameLength: number; nameMatches: boolean | null; shape: string } | undefined;
+
+// What the last Google search returned for photos (counts and the shape of one name, no secrets).
+// Shown on /health so it can be read without access to the logs.
+export const photoCheck = () => lastCheck;
+
 function logPhotoShape(places: GooglePlace[]) {
-  if (loggedShape >= 3) return;
-  loggedShape++;
   const withPhotos = places.filter((p) => p.photos?.length);
   const sample = withPhotos[0]?.photos?.[0]?.name ?? "";
   const ok = /^places\/([\w-]+)\/photos\/([\w-]+)$/.test(sample);
+  lastCheck = {
+    places: places.length,
+    withPhotos: withPhotos.length,
+    nameLength: sample.length,
+    nameMatches: sample ? ok : null,
+    shape: sample.replace(/[A-Za-z0-9]/g, "x").slice(0, 40),
+  };
+  if (loggedShape >= 3) return;
+  loggedShape++;
   console.log(
     `Google sent ${places.length} places, ${withPhotos.length} with photos; first photo name ${sample ? `has ${sample.length} characters, matches expected shape: ${ok}, shape: ${sample.replace(/[A-Za-z0-9]/g, "x").slice(0, 40)}` : "(none)"}`,
   );
